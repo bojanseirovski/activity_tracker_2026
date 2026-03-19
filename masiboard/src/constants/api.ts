@@ -1,0 +1,17 @@
+export const API = {
+    LOGIN: '/api/login',
+    REGISTER: '/api/register',
+    LOGOUT: '/api/logout',
+    LEADERBOARD: '/api/leaderboard',
+    SEARCH: '/api/search',
+    ENTRIES: '/api/entries',
+    ENTRY: (id: number) => `/api/entries/${id}`,
+    ACTIVITY_TYPES: '/api/activity-types',
+    ACTIVITY_TYPE: (id: number) => `/api/activity-types/${id}`,
+    USER_ME: '/api/user/me',
+    TOP_PERFORMERS: '/api/top-performers',
+    USER_PROFILE: (id: number) => `/api/users/${id}`,
+    ENTRY_LIKES: (id: number) => `/api/entries/${id}/likes`,
+    FORGOT_PASSWORD: '/api/auth/forgot-password',
+    RESET_PASSWORD: '/api/auth/reset-password',
+};

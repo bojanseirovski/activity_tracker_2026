@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-masiboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-masiboard}
+      POSTGRES_DB: ${POSTGRES_DB:-masiboard}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-masiboard}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-masiboard}:${POSTGRES_PASSWORD:-masiboard}@db:5432/${POSTGRES_DB:-masiboard}
+      SESSION_SECRET: ${SESSION_SECRET:-changeme}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      PORT: 3000
+      MAILERSEND_API_KEY: ${MAILERSEND_API_KEY:-nokeyatall}
+      MAILERSEND_FROM_EMAIL: ${MAILERSEND_FROM_EMAIL:-noreply@example.com}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+    depends_on:
+      db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: rebuild
+          path: ./package.json
+
+volumes:
+  pgdata:
