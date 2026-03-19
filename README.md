@@ -1,4 +1,4 @@
-# Masiboard
+# ActivityTracker2026
 
 A competitive activity tracking and leaderboard app. Users log activities with points, compete on a ranked leaderboard, like each other's entries, and manage custom activity categories.
 
