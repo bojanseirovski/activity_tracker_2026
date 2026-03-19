@@ -6,11 +6,10 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 
 ## Screenshots
 
-<!-- Add screenshots here -->
 | | |
 |---|---|
-| ![Screenshot 1](screenshots/screenshot-1.png) | ![Screenshot 2](screenshots/screenshot-2.png) |
-| ![Screenshot 3](screenshots/screenshot-3.png) | ![Screenshot 4](screenshots/screenshot-4.png) |
+| ![Screenshot 1](screenshots/screenshot1.png) | ![Screenshot 2](screenshots/screenshot2.png) |
+| ![Screenshot 3](screenshots/screenshot3.png) | ![Screenshot 4](screenshots/screenshot4.png) |
 
 ---
 

@@ -26,37 +26,27 @@ const Navbar = () => {
     return (
         <nav className="bg-white border-b border-gray-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
+                <div className="flex justify-between items-center h-16">
                     <div className="flex items-center">
                         <Link to="/">
                             <img src="/logo192.png" alt="ActivityTracker2026" className="h-8 w-8" />
                         </Link>
                     </div>
 
-                    {/* Avatar + Hamburger */}
-                    <div className="flex items-center space-x-2">
-                        {user && (
-                            <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold">
-                                {getInitials(user.name)}
+                    <span className="text-lg font-bold text-gray-800">ActivityTracker2026</span>
+
+                    <div className="flex items-center">
+                        {user ? (
+                            <div
+                                className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold cursor-pointer select-none"
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                aria-expanded={isMenuOpen}
+                            >
+                                {getInitials(user.username || user.name)}
                             </div>
+                        ) : (
+                            <div className="h-8 w-8" />
                         )}
-                        <button
-                            type="button"
-                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            aria-expanded={isMenuOpen}
-                        >
-                            <span className="sr-only">Open main menu</span>
-                            {isMenuOpen ? (
-                                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            ) : (
-                                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            )}
-                        </button>
                     </div>
                 </div>
             </div>

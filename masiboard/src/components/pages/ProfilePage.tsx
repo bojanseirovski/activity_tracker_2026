@@ -8,13 +8,13 @@ import { MESSAGES } from '../../constants/messages';
 
 const ProfilePage: React.FC = () => {
     const { user, updateUser } = useAuth();
-    const [form, setForm] = useState({ name: user?.username || '', email: user?.email || '' });
+    const [form, setForm] = useState({ id: user?.id, username: user?.username || '', email: user?.email || '' });
     const [modal, setModal] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' } | null>(null);
 
     useEffect(() => {
         apiClient.get(API.USER_ME)
             .then(response => {
-                setForm({ name: response.data.username || '', email: response.data.email || '' });
+                setForm({ id: response.data.id, username: response.data.username || '', email: response.data.email || '' });
                 updateUser(response.data);
             })
             .catch(error => {
@@ -57,14 +57,14 @@ const ProfilePage: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="p-6 space-y-6">
                         <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
                                 Name
                             </label>
                             <input
                                 type="text"
-                                id="name"
-                                name="name"
-                                value={form.name}
+                                id="username"
+                                name="username"
+                                value={form.username}
                                 onChange={handleChange}
                                 placeholder="Enter your name"
                                 required
