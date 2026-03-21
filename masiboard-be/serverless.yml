@@ -1,0 +1,37 @@
+service: masiboard-be
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  environment:
+    DATABASE_URL: ${env:DATABASE_URL}
+    JWT_SECRET: ${env:JWT_SECRET}
+    CORS_ORIGIN: ${env:CORS_ORIGIN}
+    MAILERSEND_API_KEY: ${env:MAILERSEND_API_KEY}
+    MAILERSEND_FROM_EMAIL: ${env:MAILERSEND_FROM_EMAIL}
+    FRONTEND_URL: ${env:FRONTEND_URL}
+    NODE_ENV: production
+
+functions:
+  api:
+    handler: dist/server.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: any
+      - httpApi:
+          path: /
+          method: any
+
+plugins:
+  - serverless-offline
+
+package:
+  patterns:
+    - '!src/**'
+    - '!.env'
+    - '!Dockerfile*'
+    - '!docker-compose*'
+    - '!*.md'

@@ -1,3 +1,4 @@
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -7,6 +8,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.handler = void 0;
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -14,23 +17,44 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const dotenv = require('dotenv');
 const path = require('path');
-const session = require('express-session');
+const jwt = require('jsonwebtoken');
 const cryptoUtils = require('crypto');
 const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+const serverless = require('serverless-http');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
-    credentials: true
-}));
 app.use(bodyParser.json());
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'fallback_secret_key',
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }
-}));
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    if (req.body && Buffer.isBuffer(req.body)) {
+        try {
+            req.body = JSON.parse(req.body.toString('utf8'));
+        }
+        catch (e) {
+            req.body = {};
+        }
+    }
+    if (typeof req.body === 'string') {
+        try {
+            req.body = JSON.parse(req.body);
+        }
+        catch (e) {
+            req.body = {};
+        }
+    }
+    next();
+});
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 2 // Lambda: avoid exhausting PostgreSQL connections across concurrent instances
+});
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_jwt_secret';
+const JWT_EXPIRES_IN = '7d';
 function initializeDatabase() {
     return __awaiter(this, void 0, void 0, function* () {
         yield pool.query(`
@@ -79,10 +103,18 @@ function initializeDatabase() {
 }
 // API Routes
 function requireAuth(req, res, next) {
-    if (!req.session.userId) {
+    const authHeader = req.headers['authorization'];
+    if (!(authHeader === null || authHeader === void 0 ? void 0 : authHeader.startsWith('Bearer '))) {
         return res.status(401).json({ error: 'Not logged in' });
     }
-    next();
+    try {
+        const payload = jwt.verify(authHeader.slice(7), JWT_SECRET);
+        req.userId = payload.userId;
+        next();
+    }
+    catch (_a) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 }
 const ALLOWED_SORT_COLS = new Set(['date', 'points', 'activity_type']);
 function buildOrderClause(sort, order) {
@@ -92,7 +124,7 @@ function buildOrderClause(sort, order) {
     return `ORDER BY ${sqlCol} ${dir}`;
 }
 // Activity Types routes
-app.get('/api/activity-types', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/activity-types', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { rows } = yield pool.query('SELECT * FROM activity_types ORDER BY name ASC');
         res.json(rows);
@@ -102,7 +134,7 @@ app.get('/api/activity-types', (req, res) => __awaiter(this, void 0, void 0, fun
         res.status(500).json({ error: 'Failed to fetch activity types' });
     }
 }));
-app.get('/api/activity-types/:id', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/activity-types/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { rows } = yield pool.query('SELECT * FROM activity_types WHERE id = $1', [req.params.id]);
         if (!rows[0])
@@ -114,12 +146,12 @@ app.get('/api/activity-types/:id', (req, res) => __awaiter(this, void 0, void 0,
         res.status(500).json({ error: 'Failed to fetch activity type' });
     }
 }));
-app.post('/api/activity-types', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/activity-types', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.body;
     if (!name)
         return res.status(400).json({ error: 'Name is required' });
     try {
-        const { rows } = yield pool.query('INSERT INTO activity_types (name, created_by) VALUES ($1, $2) RETURNING id', [name, req.session.userId]);
+        const { rows } = yield pool.query('INSERT INTO activity_types (name, created_by) VALUES ($1, $2) RETURNING id', [name, req.userId]);
         res.status(201).json({ id: rows[0].id, name });
     }
     catch (err) {
@@ -129,7 +161,7 @@ app.post('/api/activity-types', requireAuth, (req, res) => __awaiter(this, void 
         res.status(500).json({ error: 'Failed to create activity type' });
     }
 }));
-app.put('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.put('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.body;
     if (!name)
         return res.status(400).json({ error: 'Name is required' });
@@ -137,7 +169,7 @@ app.put('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(this, vo
         const { rows } = yield pool.query('SELECT * FROM activity_types WHERE id = $1', [req.params.id]);
         if (!rows[0])
             return res.status(404).json({ error: 'Activity type not found' });
-        if (rows[0].created_by !== req.session.userId)
+        if (rows[0].created_by !== req.userId)
             return res.status(403).json({ error: 'Forbidden' });
         yield pool.query('UPDATE activity_types SET name = $1 WHERE id = $2', [name, req.params.id]);
         res.json({ id: Number(req.params.id), name });
@@ -147,12 +179,12 @@ app.put('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(this, vo
         res.status(500).json({ error: 'Failed to update activity type' });
     }
 }));
-app.delete('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.delete('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { rows } = yield pool.query('SELECT * FROM activity_types WHERE id = $1', [req.params.id]);
         if (!rows[0])
             return res.status(404).json({ error: 'Activity type not found' });
-        if (rows[0].created_by !== req.session.userId)
+        if (rows[0].created_by !== req.userId)
             return res.status(403).json({ error: 'Forbidden' });
         yield pool.query('DELETE FROM activity_types WHERE id = $1', [req.params.id]);
         res.json({ message: 'Activity type deleted successfully' });
@@ -163,7 +195,7 @@ app.delete('/api/activity-types/:id', requireAuth, (req, res) => __awaiter(this,
     }
 }));
 // Register endpoint
-app.post('/api/register', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
@@ -179,9 +211,8 @@ app.post('/api/register', (req, res) => __awaiter(this, void 0, void 0, function
     try {
         const hashedPassword = yield bcrypt.hash(password, 10);
         const { rows } = yield pool.query('INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id', [username, email, hashedPassword]);
-        req.session.userId = rows[0].id;
-        req.session.username = username;
-        res.status(201).json({ message: 'User registered successfully', sessionId: req.session.id });
+        const token = jwt.sign({ userId: rows[0].id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.status(201).json({ message: 'User registered successfully', token });
     }
     catch (err) {
         if (err.code === '23505') {
@@ -195,7 +226,7 @@ app.post('/api/register', (req, res) => __awaiter(this, void 0, void 0, function
     }
 }));
 // Login endpoint
-app.post('/api/login', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
@@ -207,10 +238,8 @@ app.post('/api/login', (req, res) => __awaiter(this, void 0, void 0, function* (
         if (!valid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        req.session.userId = user.id;
-        req.session.username = user.username;
-        req.session.email = user.email;
-        res.json({ message: 'Login successful', sessionId: req.session.id, userId: user.id });
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.json({ message: 'Login successful', token, userId: user.id });
     }
     catch (err) {
         console.error(err.message);
@@ -218,17 +247,11 @@ app.post('/api/login', (req, res) => __awaiter(this, void 0, void 0, function* (
     }
 }));
 // Logout endpoint
-app.post('/api/logout', requireAuth, (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            console.error(err.message);
-            return res.status(500).json({ error: 'Failed to logout' });
-        }
-        res.json({ message: 'Logout successful' });
-    });
+app.post('/api/logout', requireAuth, (_req, res) => {
+    res.json({ message: 'Logout successful' });
 });
 // Current user profile
-app.get('/api/user/me', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/user/me', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { rows } = yield pool.query(`
             SELECT u.id, u.username, u.email,
@@ -238,7 +261,7 @@ app.get('/api/user/me', requireAuth, (req, res) => __awaiter(this, void 0, void 
             LEFT JOIN entries e ON e.user_id = u.id
             WHERE u.id = $1
             GROUP BY u.id
-        `, [req.session.userId]);
+        `, [req.userId]);
         if (!rows[0])
             return res.status(404).json({ error: 'User not found' });
         res.json({
@@ -255,12 +278,12 @@ app.get('/api/user/me', requireAuth, (req, res) => __awaiter(this, void 0, void 
     }
 }));
 // Update current user profile (username only)
-app.post('/api/user/me', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/user/me', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username } = req.body;
     if (!username)
         return res.status(400).json({ error: 'Username is required' });
     try {
-        const result = yield pool.query('UPDATE users SET username = $1 WHERE id = $2 RETURNING id, username, email', [username, req.session.userId]);
+        const result = yield pool.query('UPDATE users SET username = $1 WHERE id = $2 RETURNING id, username, email', [username, req.userId]);
         if (result.rowCount === 0)
             return res.status(404).json({ error: 'User not found' });
         res.json(result.rows[0]);
@@ -273,7 +296,7 @@ app.post('/api/user/me', requireAuth, (req, res) => __awaiter(this, void 0, void
     }
 }));
 // Public user profile
-app.get('/api/users/:id', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/users/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     const userId = parseInt(req.params.id);
     if (isNaN(userId))
@@ -320,11 +343,11 @@ app.get('/api/users/:id', (req, res) => __awaiter(this, void 0, void 0, function
     }
 }));
 // Create entry
-app.post('/api/entries', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/entries', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, points, date, activity_type_id } = req.body;
     try {
-        const { rows } = yield pool.query('INSERT INTO entries (name, points, date, activity_type_id, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id', [name, points, date, activity_type_id !== null && activity_type_id !== void 0 ? activity_type_id : null, req.session.userId]);
-        res.status(201).json({ id: rows[0].id, name, points, date, activity_type_id: activity_type_id !== null && activity_type_id !== void 0 ? activity_type_id : null, user_id: req.session.userId });
+        const { rows } = yield pool.query('INSERT INTO entries (name, points, date, activity_type_id, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id', [name, points, date, activity_type_id !== null && activity_type_id !== void 0 ? activity_type_id : null, req.userId]);
+        res.status(201).json({ id: rows[0].id, name, points, date, activity_type_id: activity_type_id !== null && activity_type_id !== void 0 ? activity_type_id : null, user_id: req.userId });
     }
     catch (err) {
         console.error(err.message);
@@ -332,14 +355,14 @@ app.post('/api/entries', requireAuth, (req, res) => __awaiter(this, void 0, void
     }
 }));
 // Leaderboard
-app.get('/api/leaderboard', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/leaderboard', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const page = parseInt(req.query.page || '1', 10);
     const limit = 10;
     const offset = (page - 1) * limit;
     const orderClause = buildOrderClause(req.query.sort, req.query.order);
     try {
-        const sessionUserId = (_a = req.session.userId) !== null && _a !== void 0 ? _a : null;
+        const sessionUserId = (_a = req.userId) !== null && _a !== void 0 ? _a : null;
         const { rows } = yield pool.query(`
             SELECT e.*, at.name AS activity_type,
                    COUNT(el.user_id)::int                        AS like_count,
@@ -359,7 +382,7 @@ app.get('/api/leaderboard', (req, res) => __awaiter(this, void 0, void 0, functi
     }
 }));
 // Top performers
-app.get('/api/top-performers', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/top-performers', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const limit = Math.min(parseInt(req.query.limit || '10', 10), 100);
     const dir = ((_a = req.query.order) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === 'asc' ? 'ASC' : 'DESC';
@@ -384,7 +407,7 @@ app.get('/api/top-performers', (req, res) => __awaiter(this, void 0, void 0, fun
     }
 }));
 // Search entries
-app.get('/api/search', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/search', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const query = req.query.q || '';
     const orderClause = buildOrderClause(req.query.sort, req.query.order);
     try {
@@ -403,7 +426,7 @@ app.get('/api/search', (req, res) => __awaiter(this, void 0, void 0, function* (
     }
 }));
 // Get a single entry by ID
-app.get('/api/entries/:id', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/entries/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { rows } = yield pool.query(`
             SELECT e.*, at.name AS activity_type
@@ -421,7 +444,7 @@ app.get('/api/entries/:id', (req, res) => __awaiter(this, void 0, void 0, functi
     }
 }));
 // Update an entry by ID
-app.put('/api/entries/:id', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.put('/api/entries/:id', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.params.id;
     const { name, points, date, activity_type_id } = req.body;
     try {
@@ -436,7 +459,7 @@ app.put('/api/entries/:id', requireAuth, (req, res) => __awaiter(this, void 0, v
     }
 }));
 // Delete an entry by ID
-app.delete('/api/entries/:id', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.delete('/api/entries/:id', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.params.id;
     try {
         const result = yield pool.query('DELETE FROM entries WHERE id = $1', [id]);
@@ -450,10 +473,10 @@ app.delete('/api/entries/:id', requireAuth, (req, res) => __awaiter(this, void 0
     }
 }));
 // Get likes for an entry
-app.get('/api/entries/:id/likes', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.get('/api/entries/:id/likes', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const entryId = parseInt(req.params.id);
-    const sessionUserId = (_a = req.session.userId) !== null && _a !== void 0 ? _a : null;
+    const sessionUserId = (_a = req.userId) !== null && _a !== void 0 ? _a : null;
     try {
         const { rows } = yield pool.query(`
             SELECT u.id AS user_id, u.username,
@@ -474,15 +497,15 @@ app.get('/api/entries/:id/likes', (req, res) => __awaiter(this, void 0, void 0, 
     }
 }));
 // Like an entry
-app.post('/api/entries/:id/likes', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/entries/:id/likes', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const entryId = parseInt(req.params.id);
     try {
         const { rows: entryRows } = yield pool.query('SELECT user_id FROM entries WHERE id = $1', [entryId]);
         if (!entryRows[0])
             return res.status(404).json({ error: 'Entry not found' });
-        if (entryRows[0].user_id === req.session.userId)
+        if (entryRows[0].user_id === req.userId)
             return res.status(403).json({ error: 'Cannot like your own entry' });
-        yield pool.query('INSERT INTO entry_likes (entry_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [entryId, req.session.userId]);
+        yield pool.query('INSERT INTO entry_likes (entry_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [entryId, req.userId]);
         const { rows } = yield pool.query('SELECT COUNT(*)::int AS count FROM entry_likes WHERE entry_id = $1', [entryId]);
         res.json({ count: rows[0].count });
     }
@@ -492,10 +515,10 @@ app.post('/api/entries/:id/likes', requireAuth, (req, res) => __awaiter(this, vo
     }
 }));
 // Unlike an entry
-app.delete('/api/entries/:id/likes', requireAuth, (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.delete('/api/entries/:id/likes', requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const entryId = parseInt(req.params.id);
     try {
-        yield pool.query('DELETE FROM entry_likes WHERE entry_id = $1 AND user_id = $2', [entryId, req.session.userId]);
+        yield pool.query('DELETE FROM entry_likes WHERE entry_id = $1 AND user_id = $2', [entryId, req.userId]);
         const { rows } = yield pool.query('SELECT COUNT(*)::int AS count FROM entry_likes WHERE entry_id = $1', [entryId]);
         res.json({ count: rows[0].count });
     }
@@ -505,7 +528,7 @@ app.delete('/api/entries/:id/likes', requireAuth, (req, res) => __awaiter(this, 
     }
 }));
 // Forgot password — request reset link
-app.post('/api/auth/forgot-password', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/auth/forgot-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email } = req.body;
     // Always respond 200 to prevent email enumeration
     res.json({ message: 'If that email is registered, a reset link has been sent.' });
@@ -533,7 +556,7 @@ app.post('/api/auth/forgot-password', (req, res) => __awaiter(this, void 0, void
     }
 }));
 // Reset password — verify token and update password
-app.post('/api/auth/reset-password', (req, res) => __awaiter(this, void 0, void 0, function* () {
+app.post('/api/auth/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { token, password } = req.body;
     if (!token || !password) {
         return res.status(400).json({ message: 'Token and password are required.' });
@@ -558,13 +581,33 @@ app.post('/api/auth/reset-password', (req, res) => __awaiter(this, void 0, void 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running' });
 });
-const PORT = process.env.PORT || 3000;
-function start() {
-    return __awaiter(this, void 0, void 0, function* () {
+// Lambda handler — lazy-initializes the DB on first invocation
+let initialized = false;
+const handler = (event, context) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    if (!initialized) {
         yield initializeDatabase();
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
-        });
-    });
+        initialized = true;
+    }
+    if (event.rawPath) {
+        event.rawPath = event.rawPath.replace(/^\/default/, '');
+    }
+    if ((_b = (_a = event.requestContext) === null || _a === void 0 ? void 0 : _a.http) === null || _b === void 0 ? void 0 : _b.path) {
+        event.requestContext.http.path = event.requestContext.http.path.replace(/^\/default/, '');
+    }
+    // Decode base64 body
+    if (event.body && event.isBase64Encoded) {
+        event.body = Buffer.from(event.body, 'base64').toString('utf8');
+        event.isBase64Encoded = false;
+    }
+    return serverlessHandler(event, context);
+});
+exports.handler = handler;
+const serverlessHandler = serverless(app);
+// Local development (ts-node / nodemon)
+if (process.env.IS_OFFLINE || process.env.NODE_ENV === 'development') {
+    const PORT = process.env.PORT || 3000;
+    initializeDatabase().then(() => {
+        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    }).catch(console.error);
 }
-start().catch(console.error);

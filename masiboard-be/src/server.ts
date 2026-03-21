@@ -5,28 +5,53 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const dotenv = require('dotenv');
 const path = require('path');
-const session = require('express-session');
+const jwt = require('jsonwebtoken');
 const cryptoUtils = require('crypto');
 const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+const serverless = require('serverless-http');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
-    credentials: true
-}));
 app.use(bodyParser.json());
 
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'fallback_secret_key',
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }
-}));
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    if (req.body && Buffer.isBuffer(req.body)) {
+        try {
+            req.body = JSON.parse(req.body.toString('utf8'));
+        } catch (e) {
+            req.body = {};
+        }
+    }
+    if (typeof req.body === 'string') {
+        try {
+            req.body = JSON.parse(req.body);
+        } catch (e) {
+            req.body = {};
+        }
+    }
+    next();
+});
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 2  // Lambda: avoid exhausting PostgreSQL connections across concurrent instances
+});
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_jwt_secret';
+const JWT_EXPIRES_IN = '7d';
+
+declare global {
+    namespace Express {
+        interface Request { userId?: number; }
+    }
+}
 
 async function initializeDatabase() {
     await pool.query(`
@@ -80,11 +105,18 @@ async function initializeDatabase() {
 
 // API Routes
 
-function requireAuth(req, res, next) {
-    if (!req.session.userId) {
+function requireAuth(req: any, res: any, next: any) {
+    const authHeader = req.headers['authorization'] as string | undefined;
+    if (!authHeader?.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Not logged in' });
     }
-    next();
+    try {
+        const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: number };
+        req.userId = payload.userId;
+        next();
+    } catch {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 }
 
 const ALLOWED_SORT_COLS = new Set(['date', 'points', 'activity_type']);
@@ -125,7 +157,7 @@ app.post('/api/activity-types', requireAuth, async (req, res) => {
     try {
         const { rows } = await pool.query(
             'INSERT INTO activity_types (name, created_by) VALUES ($1, $2) RETURNING id',
-            [name, req.session.userId]
+            [name, req.userId]
         );
         res.status(201).json({ id: rows[0].id, name });
     } catch (err: any) {
@@ -142,7 +174,7 @@ app.put('/api/activity-types/:id', requireAuth, async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT * FROM activity_types WHERE id = $1', [req.params.id]);
         if (!rows[0]) return res.status(404).json({ error: 'Activity type not found' });
-        if (rows[0].created_by !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (rows[0].created_by !== req.userId) return res.status(403).json({ error: 'Forbidden' });
 
         await pool.query('UPDATE activity_types SET name = $1 WHERE id = $2', [name, req.params.id]);
         res.json({ id: Number(req.params.id), name });
@@ -156,7 +188,7 @@ app.delete('/api/activity-types/:id', requireAuth, async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT * FROM activity_types WHERE id = $1', [req.params.id]);
         if (!rows[0]) return res.status(404).json({ error: 'Activity type not found' });
-        if (rows[0].created_by !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (rows[0].created_by !== req.userId) return res.status(403).json({ error: 'Forbidden' });
 
         await pool.query('DELETE FROM activity_types WHERE id = $1', [req.params.id]);
         res.json({ message: 'Activity type deleted successfully' });
@@ -187,9 +219,8 @@ app.post('/api/register', async (req, res) => {
             'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id',
             [username, email, hashedPassword]
         );
-        req.session.userId = rows[0].id;
-        req.session.username = username;
-        res.status(201).json({ message: 'User registered successfully', sessionId: req.session.id });
+        const token = jwt.sign({ userId: rows[0].id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.status(201).json({ message: 'User registered successfully', token });
     } catch (err: any) {
         if (err.code === '23505') {
             if (err.constraint?.includes('email')) return res.status(400).json({ error: 'Email already exists' });
@@ -214,10 +245,8 @@ app.post('/api/login', async (req, res) => {
         if (!valid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        req.session.userId = user.id;
-        req.session.username = user.username;
-        req.session.email = user.email;
-        res.json({ message: 'Login successful', sessionId: req.session.id, userId: user.id });
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.json({ message: 'Login successful', token, userId: user.id });
     } catch (err: any) {
         console.error(err.message);
         res.status(500).json({ error: 'Failed to login' });
@@ -225,14 +254,8 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Logout endpoint
-app.post('/api/logout', requireAuth, (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            console.error(err.message);
-            return res.status(500).json({ error: 'Failed to logout' });
-        }
-        res.json({ message: 'Logout successful' });
-    });
+app.post('/api/logout', requireAuth, (_req, res) => {
+    res.json({ message: 'Logout successful' });
 });
 
 // Current user profile
@@ -246,7 +269,7 @@ app.get('/api/user/me', requireAuth, async (req, res) => {
             LEFT JOIN entries e ON e.user_id = u.id
             WHERE u.id = $1
             GROUP BY u.id
-        `, [req.session.userId]);
+        `, [req.userId]);
         if (!rows[0]) return res.status(404).json({ error: 'User not found' });
         res.json({
             id: rows[0].id,
@@ -269,7 +292,7 @@ app.post('/api/user/me', requireAuth, async (req, res) => {
     try {
         const result = await pool.query(
             'UPDATE users SET username = $1 WHERE id = $2 RETURNING id, username, email',
-            [username, req.session.userId]
+            [username, req.userId]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
         res.json(result.rows[0]);
@@ -335,9 +358,9 @@ app.post('/api/entries', requireAuth, async (req, res) => {
     try {
         const { rows } = await pool.query(
             'INSERT INTO entries (name, points, date, activity_type_id, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [name, points, date, activity_type_id ?? null, req.session.userId]
+            [name, points, date, activity_type_id ?? null, req.userId]
         );
-        res.status(201).json({ id: rows[0].id, name, points, date, activity_type_id: activity_type_id ?? null, user_id: req.session.userId });
+        res.status(201).json({ id: rows[0].id, name, points, date, activity_type_id: activity_type_id ?? null, user_id: req.userId });
     } catch (err: any) {
         console.error(err.message);
         res.status(500).json({ error: 'Failed to insert entry' });
@@ -352,7 +375,7 @@ app.get('/api/leaderboard', async (req, res) => {
     const orderClause = buildOrderClause(req.query.sort as string, req.query.order as string);
 
     try {
-        const sessionUserId = req.session.userId ?? null;
+        const sessionUserId = req.userId ?? null;
         const { rows } = await pool.query(`
             SELECT e.*, at.name AS activity_type,
                    COUNT(el.user_id)::int                        AS like_count,
@@ -468,7 +491,7 @@ app.delete('/api/entries/:id', requireAuth, async (req, res) => {
 // Get likes for an entry
 app.get('/api/entries/:id/likes', async (req, res) => {
     const entryId = parseInt(req.params.id);
-    const sessionUserId = req.session.userId ?? null;
+    const sessionUserId = req.userId ?? null;
     try {
         const { rows } = await pool.query(`
             SELECT u.id AS user_id, u.username,
@@ -494,12 +517,12 @@ app.post('/api/entries/:id/likes', requireAuth, async (req, res) => {
     try {
         const { rows: entryRows } = await pool.query('SELECT user_id FROM entries WHERE id = $1', [entryId]);
         if (!entryRows[0]) return res.status(404).json({ error: 'Entry not found' });
-        if (entryRows[0].user_id === req.session.userId)
+        if (entryRows[0].user_id === req.userId)
             return res.status(403).json({ error: 'Cannot like your own entry' });
 
         await pool.query(
             'INSERT INTO entry_likes (entry_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [entryId, req.session.userId]
+            [entryId, req.userId]
         );
         const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM entry_likes WHERE entry_id = $1', [entryId]);
         res.json({ count: rows[0].count });
@@ -513,7 +536,7 @@ app.post('/api/entries/:id/likes', requireAuth, async (req, res) => {
 app.delete('/api/entries/:id/likes', requireAuth, async (req, res) => {
     const entryId = parseInt(req.params.id);
     try {
-        await pool.query('DELETE FROM entry_likes WHERE entry_id = $1 AND user_id = $2', [entryId, req.session.userId]);
+        await pool.query('DELETE FROM entry_likes WHERE entry_id = $1 AND user_id = $2', [entryId, req.userId]);
         const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM entry_likes WHERE entry_id = $1', [entryId]);
         res.json({ count: rows[0].count });
     } catch (err: any) {
@@ -590,13 +613,34 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running' });
 });
 
-const PORT = process.env.PORT || 3000;
+// Lambda handler — lazy-initializes the DB on first invocation
+let initialized = false;
 
-async function start() {
-    await initializeDatabase();
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
+export const handler = async (event: any, context: any) => {
+    if (!initialized) {
+        await initializeDatabase();
+        initialized = true;
+    }
+    if (event.rawPath) {
+        event.rawPath = event.rawPath.replace(/^\/default/, '');
+    }
+    if (event.requestContext?.http?.path) {
+        event.requestContext.http.path = event.requestContext.http.path.replace(/^\/default/, '');
+    }
+    // Decode base64 body
+    if (event.body && event.isBase64Encoded) {
+        event.body = Buffer.from(event.body, 'base64').toString('utf8');
+        event.isBase64Encoded = false;
+    }
+    return serverlessHandler(event, context);
+};
+
+const serverlessHandler = serverless(app);
+
+// Local development (ts-node / nodemon)
+if (process.env.IS_OFFLINE || process.env.NODE_ENV === 'development') {
+    const PORT = process.env.PORT || 3000;
+    initializeDatabase().then(() => {
+        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    }).catch(console.error);
 }
-
-start().catch(console.error);
