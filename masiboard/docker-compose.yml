@@ -2,11 +2,7 @@ services:
   web:
     build:
       context: .
-      # "/" makes axios use the current origin; nginx proxies /api/* to the backend
       args:
-        REACT_APP_API_URL: "/"
+        EXPO_PUBLIC_API_URL: "/"
     ports:
-      - "3001:80"
-
-volumes:
-  pgdata:
+      - "3002:80"

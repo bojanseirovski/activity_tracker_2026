@@ -31,13 +31,13 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 
 ## Tech Stack
 
-### Frontend
+### Mobile / Web App
 | | |
 |---|---|
-| Framework | React 19 + TypeScript |
-| Routing | React Router v7 |
-| Styling | Tailwind CSS |
-| HTTP | Axios |
+| Framework | Expo SDK 55 + React Native 0.83.2 |
+| Routing | Expo Router (file-based) |
+| Styling | NativeWind v4 (Tailwind for RN) |
+| Targets | iOS · Android · Web |
 
 ### Backend
 | | |
@@ -52,12 +52,12 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 
 ## Getting Started
 
-Both repos must be cloned as siblings inside the same parent directory:
+All repos must be cloned as siblings inside the same parent directory:
 
 ```
 dev/
-├── masiboard/       ← frontend
-├── masiboard-be/    ← backend
+├── masiboard/   ← mobile/web app (Expo + React Native)
+├── masiboard-be/    ← backend (Express + PostgreSQL)
 └── README.md
 ```
 
@@ -69,28 +69,38 @@ Run each service from its own directory (they have separate compose files):
 # Backend (API + PostgreSQL) — from masiboard-be/
 docker compose -f docker-compose.dev.yml up --build
 
-# Frontend — from masiboard/
+# Mobile/Web app (Expo) — from masiboard/
 docker compose -f docker-compose.dev.yml up --build
+# or run natively (also enables iOS/Android via Expo Go):
+npx expo start
 ```
 
-- Frontend: http://localhost:3001
+- Expo web: http://localhost:8081 · Expo mobile: scan QR code with Expo Go
 - Backend API: http://localhost:3000
 
-Hot-reloading is enabled for both frontend (`src/`) and backend (`src/`) via Docker Compose watch.
+Hot-reloading is enabled for all services via Docker Compose watch.
 
 ### Production
 
 ```bash
-docker compose -f masiboard/docker-compose.yml up --build
+
+# Mobile/Web app
+docker compose -f masiboard-app/docker-compose.yml up --build
 ```
 
-- App: http://localhost:3001 (served by nginx, proxies `/api/*` to the backend)
+- Mobile/Web app: http://localhost:3002 (nginx, proxies `/api/*` to the backend)
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file in `masiboard-be/` (see `.env.example`):
+### `masiboard/` (see `.env.example`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | `http://localhost:3000` | Backend API base URL |
+
+### `masiboard-be/` (see `.env.example`)
 
 | Variable | Default | Description |
 |---|---|---|
