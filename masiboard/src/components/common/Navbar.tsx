@@ -11,6 +11,8 @@ const Navbar = () => {
             { name: 'Leaderboard', path: '/' },
             { name: 'Search & Filter', path: '/search' },
             { name: 'Activity Types', path: '/activity-types' },
+            { name: 'Challenges', path: '/challenges' },
+            { name: 'Teams', path: '/teams' },
             { name: 'Add Entry', path: '/entries/add' },
             { name: 'Profile', path: '/profile' },
             { name: 'Logout', path: '/logout' },

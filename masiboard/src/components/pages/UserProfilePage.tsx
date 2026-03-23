@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { API } from '../../constants/api';
 import ErrorMessage from '../common/ErrorMessage';
+import { useAuth } from '../../context/AuthContext';
 
 interface UserProfile {
     username: string;
@@ -10,18 +11,32 @@ interface UserProfile {
     position: number;
     last_activity_types: string[];
 }
+interface UserChallenge { id: number; title: string; start_date: string; end_date: string; activity_type_name: string | null; user_points: number; }
+interface UserTeam { id: number; title: string; activity_type_name: string | null; user_points: number; }
 
 const UserProfilePage: React.FC = () => {
+    const { user } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [challenges, setChallenges] = useState<UserChallenge[]>([]);
+    const [teams, setTeams] = useState<UserTeam[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchProfile = () => {
         setLoading(true);
         setError(null);
-        apiClient.get(API.USER_PROFILE(Number(id)))
-            .then(({ data }) => setProfile(data))
+        const uid = Number(id);
+        Promise.all([
+            apiClient.get(API.USER_PROFILE(uid)),
+            apiClient.get(API.USER_CHALLENGES(uid)),
+            apiClient.get(API.USER_TEAMS(uid)),
+        ])
+            .then(([profileRes, challengesRes, teamsRes]) => {
+                setProfile(profileRes.data);
+                setChallenges(challengesRes.data);
+                setTeams(teamsRes.data);
+            })
             .catch(() => setError('Could not load user profile.'))
             .finally(() => setLoading(false));
     };
@@ -83,20 +98,75 @@ const UserProfilePage: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {challenges.length > 0 && (
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-700 mb-3">Challenges</h3>
+                                    <div className="space-y-2">
+                                        {challenges.map(c => (
+                                            <Link key={c.id} to={`/challenges/${c.id}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 transition duration-150">
+                                                <div>
+                                                    <span className="text-sm font-medium text-gray-800">{c.title}</span>
+                                                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                                        {c.activity_type_name && (
+                                                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">{c.activity_type_name}</span>
+                                                        )}
+                                                        <span className="text-xs text-gray-400">{c.start_date} – {c.end_date}</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-sm font-bold text-blue-600 ml-3">{c.user_points} pts</span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {teams.length > 0 && (
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-700 mb-3">Teams</h3>
+                                    <div className="space-y-2">
+                                        {teams.map(t => (
+                                            <Link key={t.id} to={`/teams/${t.id}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 transition duration-150">
+                                                <div>
+                                                    <span className="text-sm font-medium text-gray-800">{t.title}</span>
+                                                    {t.activity_type_name && (
+                                                        <div className="mt-0.5">
+                                                            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">{t.activity_type_name}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="text-sm font-bold text-blue-600 ml-3">{t.user_points} pts</span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
                 <div className="mt-6 text-center">
-                    <Link
-                        to="/"
-                        className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center"
-                    >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Back to Leaderboard
-                    </Link>
+                    {user ? (
+                        <Link
+                            to="/"
+                            className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Back to Leaderboard
+                        </Link>
+                    ) : (
+                        <Link
+                            to="/login"
+                            className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                            </svg>
+                            Login
+                        </Link>
+                    )}
                 </div>
             </div>
         </div>

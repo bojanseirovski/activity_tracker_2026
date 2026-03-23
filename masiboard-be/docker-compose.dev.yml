@@ -23,7 +23,8 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-masiboard}:${POSTGRES_PASSWORD:-masiboard}@db:5432/${POSTGRES_DB:-masiboard}
-      SESSION_SECRET: ${SESSION_SECRET:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-changeme}
+      NODE_ENV: development
       CORS_ORIGIN: ${CORS_ORIGIN}
       PORT: 3000
       MAILERSEND_API_KEY: ${MAILERSEND_API_KEY:-nokeyatall}

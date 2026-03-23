@@ -21,7 +21,10 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 - **User Profiles** — View personal stats, rank, and activity history
 - **Social Likes** — Like entries and see who liked them
 - **Search** — Search entries by name in real time
-- **Authentication** — Register, login, logout with session management
+- **Challenges** — Time-bound competitions with their own leaderboard; join and track points per challenge
+- **Teams** — Permanent groups with a shared leaderboard; join and accumulate points together
+- **Public User Profiles** — View any user's stats, rank, recent activities, challenges, and teams without logging in
+- **Authentication** — Register, login, logout with JWT-based auth
 - **Forgot Password** — Secure email-based password reset via MailerSend (24-hour token)
 
 ---
@@ -42,7 +45,7 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 | Runtime | Node.js 20 |
 | Framework | Express 5 + TypeScript |
 | Database | PostgreSQL 15 |
-| Auth | express-session + bcrypt |
+| Auth | JWT (jsonwebtoken) + bcrypt |
 | Email | MailerSend |
 
 ---
@@ -60,10 +63,14 @@ dev/
 
 ### Development
 
-From `/home/bojan/dev/`:
+Run each service from its own directory (they have separate compose files):
 
 ```bash
-docker compose -f masiboard/docker-compose.dev.yml up --build
+# Backend (API + PostgreSQL) — from masiboard-be/
+docker compose -f docker-compose.dev.yml up --build
+
+# Frontend — from masiboard/
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 - Frontend: http://localhost:3001
@@ -90,7 +97,7 @@ Create a `.env` file in `masiboard-be/` (see `.env.example`):
 | `POSTGRES_USER` | `masiboard` | PostgreSQL username |
 | `POSTGRES_PASSWORD` | `masiboard` | PostgreSQL password |
 | `POSTGRES_DB` | `masiboard` | PostgreSQL database name |
-| `SESSION_SECRET` | `changeme` | Secret for signing session cookies |
+| `JWT_SECRET` | `changeme` | Secret for signing JWT tokens |
 | `CORS_ORIGIN` | `http://localhost:3001` | Allowed CORS origin |
 | `PORT` | `3000` | API server port |
 | `MAILERSEND_API_KEY` | _(required for email)_ | MailerSend API key |
