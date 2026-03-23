@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "masiboard-app",
-    "slug": "masiboard-app",
+    "name": "masiboard",
+    "slug": "masiboard",
     "scheme": "masiboard",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,7 +34,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d0311686-204a-4d6c-96e6-9d5477c96cc4"
+        "projectId": "b36dd0bb-8a74-4cb6-a465-2baa5b6e7c18"
       }
     }
   }
