@@ -50,6 +50,8 @@ const Login: React.FC = () => {
                 password: formData.password
             });
 
+            if (data.token) localStorage.setItem('authToken', data.token);
+
             if (rememberMe) {
                 localStorage.setItem(REMEMBER_ME_KEY, formData.email);
             } else {

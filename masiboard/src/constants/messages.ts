@@ -42,4 +42,30 @@ export const MESSAGES = {
 
     // Search
     SEARCH_ERROR: 'Failed to perform search. Please try again.',
+
+    // Challenges
+    CHALLENGES_LOAD_ERROR: 'Failed to load challenges.',
+    CHALLENGE_CREATE_SUCCESS: 'Challenge created successfully!',
+    CHALLENGE_CREATE_ERROR: 'Failed to create challenge.',
+    CHALLENGE_UPDATE_SUCCESS: 'Challenge updated successfully!',
+    CHALLENGE_UPDATE_ERROR: 'Failed to update challenge.',
+    CHALLENGE_DELETE_CONFIRM: 'Are you sure you want to delete this challenge?',
+    CHALLENGE_DELETE_SUCCESS: 'Challenge deleted successfully!',
+    CHALLENGE_DELETE_ERROR: 'Failed to delete challenge.',
+    CHALLENGE_JOIN_ERROR: 'Failed to join challenge.',
+    CHALLENGE_LEAVE_ERROR: 'Failed to leave challenge.',
+    CHALLENGE_LOAD_ERROR: 'Failed to load challenge.',
+
+    // Teams
+    TEAMS_LOAD_ERROR: 'Failed to load teams.',
+    TEAM_CREATE_SUCCESS: 'Team created successfully!',
+    TEAM_CREATE_ERROR: 'Failed to create team.',
+    TEAM_UPDATE_SUCCESS: 'Team updated successfully!',
+    TEAM_UPDATE_ERROR: 'Failed to update team.',
+    TEAM_DELETE_CONFIRM: 'Are you sure you want to delete this team?',
+    TEAM_DELETE_SUCCESS: 'Team deleted successfully!',
+    TEAM_DELETE_ERROR: 'Failed to delete team.',
+    TEAM_JOIN_ERROR: 'Failed to join team.',
+    TEAM_LEAVE_ERROR: 'Failed to leave team.',
+    TEAM_LOAD_ERROR: 'Failed to load team.',
 };
