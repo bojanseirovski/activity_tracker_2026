@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import BarChart from '../../components/common/BarChart';
 import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
@@ -12,9 +13,11 @@ interface UserProfile {
   total_entries: number;
   position: number;
   last_activity_types: string[];
+  image_url: string | null;
 }
 interface UserChallenge { id: number; title: string; start_date: string; end_date: string; activity_type_name: string | null; user_points: number; }
 interface UserTeam { id: number; title: string; activity_type_name: string | null; user_points: number; }
+interface UserStats { avg_week: number; avg_month: number; avg_year: number; unit: string; }
 
 export default function UserProfilePage() {
   const { user } = useAuth();
@@ -22,6 +25,7 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [challenges, setChallenges] = useState<UserChallenge[]>([]);
   const [teams, setTeams] = useState<UserTeam[]>([]);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,11 +37,13 @@ export default function UserProfilePage() {
       apiClient.get(API.USER_PROFILE(uid)),
       apiClient.get(API.USER_CHALLENGES(uid)),
       apiClient.get(API.USER_TEAMS(uid)),
+      apiClient.get(API.USER_STATS(uid)),
     ])
-      .then(([profileRes, challengesRes, teamsRes]) => {
+      .then(([profileRes, challengesRes, teamsRes, statsRes]) => {
         setProfile(profileRes.data);
         setChallenges(challengesRes.data);
         setTeams(teamsRes.data);
+        setStats(statsRes.data);
       })
       .catch(() => setError('Could not load user profile.'))
       .finally(() => setLoading(false));
@@ -61,11 +67,15 @@ export default function UserProfilePage() {
       {!loading && !error && profile && (
         <View className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <View className="p-6 items-center" style={{ backgroundColor: '#3b82f6' }}>
-            <View className="w-16 h-16 rounded-full items-center justify-center mb-3" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-              <Text className="text-2xl font-bold text-white">
-                {profile.username.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {profile.image_url ? (
+              <Image source={{ uri: profile.image_url }} style={{ width: 64, height: 64, borderRadius: 32 }} className="mb-3" />
+            ) : (
+              <View className="w-16 h-16 rounded-full items-center justify-center mb-3" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                <Text className="text-2xl font-bold text-white">
+                  {profile.username.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <Text className="text-2xl font-bold text-white">{profile.username}</Text>
             <Text className="text-blue-100 mt-1">
               {positionBadge(profile.position)} Leaderboard Position
@@ -83,6 +93,22 @@ export default function UserProfilePage() {
                 <Text className="text-sm text-gray-500 mt-1">Rank</Text>
               </View>
             </View>
+
+            {stats && (stats.avg_week > 0 || stats.avg_month > 0 || stats.avg_year > 0) && (
+              <View>
+                <Text className="text-sm font-medium text-gray-700 mb-3">Distance Averages</Text>
+                <View className="bg-gray-50 rounded-xl p-4">
+                  <BarChart
+                    data={[
+                      { label: 'Week', value: stats.avg_week },
+                      { label: 'Month', value: stats.avg_month },
+                      { label: 'Year', value: stats.avg_year },
+                    ]}
+                    unit={stats.unit}
+                  />
+                </View>
+              </View>
+            )}
 
             {profile.last_activity_types.length > 0 && (
               <View>

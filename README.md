@@ -24,6 +24,9 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 - **Challenges** — Time-bound competitions with their own leaderboard; join and track points per challenge
 - **Teams** — Permanent groups with a shared leaderboard; join and accumulate points together
 - **Public User Profiles** — View any user's stats, rank, recent activities, challenges, and teams without logging in
+- **Image Uploads** — Upload images for teams, challenges, and profiles (stored in AWS S3)
+- **Unit Preferences** — Users can choose km or mi; distances display in their preferred unit
+- **Stats & Charts** — Distance averages (week/month/year) for users and teams; total distance and top-20 leaderboards for challenges and teams
 - **Authentication** — Register, login, logout with JWT-based auth
 - **Forgot Password** — Secure email-based password reset via MailerSend (24-hour token)
 
@@ -37,16 +40,18 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 | Framework | Expo SDK 55 + React Native 0.83.2 |
 | Routing | Expo Router (file-based) |
 | Styling | NativeWind v4 (Tailwind for RN) |
+| Language | TypeScript 5.9 |
 | Targets | iOS · Android · Web |
 
 ### Backend
 | | |
 |---|---|
 | Runtime | Node.js 20 |
-| Framework | Express 5 + TypeScript |
-| Database | PostgreSQL 15 |
+| Framework | Express 5 + TypeScript 5.9 |
+| Database | PostgreSQL 15 (Drizzle ORM) |
 | Auth | JWT (jsonwebtoken) + bcrypt |
 | Email | MailerSend |
+| Image Storage | AWS S3 (Multer for uploads) |
 
 ---
 
@@ -56,7 +61,7 @@ All repos must be cloned as siblings inside the same parent directory:
 
 ```
 dev/
-├── masiboard/   ← mobile/web app (Expo + React Native)
+├── masiboard-app/   ← mobile/web app (Expo + React Native)
 ├── masiboard-be/    ← backend (Express + PostgreSQL)
 └── README.md
 ```
@@ -69,7 +74,7 @@ Run each service from its own directory (they have separate compose files):
 # Backend (API + PostgreSQL) — from masiboard-be/
 docker compose -f docker-compose.dev.yml up --build
 
-# Mobile/Web app (Expo) — from masiboard/
+# Mobile/Web app (Expo) — from masiboard-app/
 docker compose -f docker-compose.dev.yml up --build
 # or run natively (also enables iOS/Android via Expo Go):
 npx expo start
@@ -94,7 +99,7 @@ docker compose -f masiboard-app/docker-compose.yml up --build
 
 ## Environment Variables
 
-### `masiboard/` (see `.env.example`)
+### `masiboard-app/` (see `.env.example`)
 
 | Variable | Default | Description |
 |---|---|---|
@@ -113,5 +118,9 @@ docker compose -f masiboard-app/docker-compose.yml up --build
 | `MAILERSEND_API_KEY` | _(required for email)_ | MailerSend API key |
 | `MAILERSEND_FROM_EMAIL` | `noreply@example.com` | Sender email address |
 | `FRONTEND_URL` | `http://localhost:3001` | Used to build password reset links |
+| `AWS_ACCESS_KEY_ID` | _(required for images)_ | AWS access key for S3 |
+| `AWS_SECRET_ACCESS_KEY` | _(required for images)_ | AWS secret key for S3 |
+| `AWS_REGION` | _(required for images)_ | AWS region for S3 bucket |
+| `AWS_S3_BUCKET` | _(required for images)_ | S3 bucket name for image uploads |
 
 Docker Compose reads these values automatically from the `.env` file next to the compose file being used.

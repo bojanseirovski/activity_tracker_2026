@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ModalMessage from '../../components/common/ModalMessage';
+import ImageUpload from '../../components/common/ImageUpload';
 import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
@@ -13,6 +14,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [unit, setUnit] = useState<'km' | 'mi'>('km');
   const [modal, setModal] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
@@ -20,6 +23,8 @@ export default function ProfilePage() {
       .then(response => {
         setUsername(response.data.username || '');
         setEmail(response.data.email || '');
+        setImageUrl(response.data.image_url || null);
+        setUnit(response.data.unit === 'mi' ? 'mi' : 'km');
         updateUser(response.data);
       })
       .catch(() => setModal({ isOpen: true, message: MESSAGES.PROFILE_LOAD_ERROR, type: 'error' }));
@@ -27,7 +32,7 @@ export default function ProfilePage() {
 
   const handleSubmit = async () => {
     try {
-      const response = await apiClient.post(API.USER_ME, { id: user?.id, username, email });
+      const response = await apiClient.post(API.USER_ME, { id: user?.id, username, email, unit });
       updateUser(response.data);
       setModal({ isOpen: true, message: MESSAGES.PROFILE_UPDATE_SUCCESS, type: 'success' });
     } catch {
@@ -52,6 +57,18 @@ export default function ProfilePage() {
       <View className="px-4 max-w-md w-full self-center gap-4">
         <View className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <View className="p-6 items-center" style={{ backgroundColor: '#3b82f6' }}>
+            {user && (
+              <View className="mb-3">
+                <ImageUpload
+                  entityType="user"
+                  entityId={user.id}
+                  currentImageUrl={imageUrl}
+                  onUploadSuccess={(url) => setImageUrl(url)}
+                  circular
+                  size={80}
+                />
+              </View>
+            )}
             <Text className="text-2xl font-bold text-white">My Profile</Text>
             <Text className="text-blue-100 mt-1">Update your account details</Text>
           </View>
@@ -71,6 +88,26 @@ export default function ProfilePage() {
               <Text className="text-sm font-medium text-gray-700 mb-1">Email</Text>
               <View className="px-4 py-3 border border-gray-200 rounded-lg bg-gray-50">
                 <Text className="text-gray-500">{email}</Text>
+              </View>
+            </View>
+
+            <View>
+              <Text className="text-sm font-medium text-gray-700 mb-1">Distance Unit</Text>
+              <View className="flex-row border border-gray-300 rounded-lg overflow-hidden">
+                <Pressable
+                  onPress={() => setUnit('km')}
+                  className="flex-1 py-3 items-center"
+                  style={{ backgroundColor: unit === 'km' ? '#3b82f6' : 'white' }}
+                >
+                  <Text className={unit === 'km' ? 'text-white font-semibold' : 'text-gray-700'}>km</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setUnit('mi')}
+                  className="flex-1 py-3 items-center"
+                  style={{ backgroundColor: unit === 'mi' ? '#3b82f6' : 'white' }}
+                >
+                  <Text className={unit === 'mi' ? 'text-white font-semibold' : 'text-gray-700'}>mi</Text>
+                </Pressable>
               </View>
             </View>
 

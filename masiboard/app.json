@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "masiboard",
-    "slug": "masiboard",
+    "name": "masiboard-app",
+    "slug": "masiboard-app",
     "scheme": "masiboard",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,8 +22,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.seirovski.masiboard"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,9 +34,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "b36dd0bb-8a74-4cb6-a465-2baa5b6e7c18"
+        "projectId": "d0311686-204a-4d6c-96e6-9d5477c96cc4"
       }
-    },
-    "owner": "bojanmasitech"
+    }
   }
 }

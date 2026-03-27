@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import ModalMessage from '../../components/common/ModalMessage';
+import ImageUpload from '../../components/common/ImageUpload';
 import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
+import { formatDistance } from '../../utils/distance';
+import BarChart from '../../components/common/BarChart';
 
 interface TeamDetail {
   id: number;
@@ -16,8 +19,11 @@ interface TeamDetail {
   member_count: number;
   total_points: number;
   is_member: boolean;
+  image_url: string | null;
+  createdBy: number;
 }
 interface LeaderboardEntry { id: number; username: string; total_points: number; rank: number; }
+interface TeamStats { avg_week: number; avg_month: number; avg_year: number; top_users: LeaderboardEntry[]; }
 type ModalState = { isOpen: boolean; message: string; type: 'success' | 'error' } | null;
 
 const rankBadge = (rank: number) =>
@@ -32,6 +38,7 @@ export default function TeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  const [stats, setStats] = useState<TeamStats | null>(null);
 
   const fetchData = () => {
     setLoading(true);
@@ -39,10 +46,12 @@ export default function TeamPage() {
     Promise.all([
       apiClient.get(API.TEAM(Number(id))),
       apiClient.get(API.TEAM_LEADERBOARD(Number(id))),
+      apiClient.get(API.TEAM_STATS(Number(id))),
     ])
-      .then(([tRes, lRes]) => {
+      .then(([tRes, lRes, sRes]) => {
         setTeam(tRes.data);
         setLeaderboard(lRes.data);
+        setStats(sRes.data);
       })
       .catch(() => setError(MESSAGES.TEAM_LOAD_ERROR))
       .finally(() => setLoading(false));
@@ -96,7 +105,21 @@ export default function TeamPage() {
         <View className="gap-5">
           <View className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <View className="p-6" style={{ backgroundColor: '#3b82f6' }}>
-              <Text className="text-2xl font-bold text-white mb-1">{team.title}</Text>
+              <View className="flex-row items-center gap-4 mb-2">
+                {user && user.id === team.createdBy ? (
+                  <ImageUpload
+                    entityType="team"
+                    entityId={team.id}
+                    currentImageUrl={team.image_url}
+                    onUploadSuccess={(url) => setTeam(prev => prev ? { ...prev, image_url: url } : prev)}
+                  />
+                ) : team.image_url ? (
+                  <Image source={{ uri: team.image_url }} style={{ width: 80, height: 80, borderRadius: 8 }} />
+                ) : null}
+                <View className="flex-1">
+                  <Text className="text-2xl font-bold text-white mb-1">{team.title}</Text>
+                </View>
+              </View>
               {team.activity_type_name && (
                 <View className="px-3 py-1 rounded-full self-start mt-2" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
                   <Text className="text-sm font-medium text-white">{team.activity_type_name}</Text>
@@ -131,16 +154,30 @@ export default function TeamPage() {
             </View>
           </View>
 
+          {stats && (stats.avg_week > 0 || stats.avg_month > 0 || stats.avg_year > 0) && (
+            <View className="bg-white rounded-2xl shadow-xl overflow-hidden p-6">
+              <Text className="text-lg font-bold text-gray-800 mb-4">Distance Averages</Text>
+              <BarChart
+                data={[
+                  { label: 'Week', value: stats.avg_week },
+                  { label: 'Month', value: stats.avg_month },
+                  { label: 'Year', value: stats.avg_year },
+                ]}
+                unit="km"
+              />
+            </View>
+          )}
+
           <View className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <View className="p-5 border-b border-gray-100">
-              <Text className="text-lg font-bold text-gray-800">Leaderboard</Text>
+              <Text className="text-lg font-bold text-gray-800">Top 20 Leaderboard</Text>
             </View>
-            {leaderboard.length === 0 ? (
+            {(stats?.top_users ?? leaderboard).length === 0 ? (
               <View className="p-10 items-center">
                 <Text className="text-gray-500">No members yet. Be the first to join!</Text>
               </View>
             ) : (
-              leaderboard.map(entry => (
+              (stats?.top_users ?? leaderboard).slice(0, 20).map(entry => (
                 <View key={entry.id} className="flex-row items-center justify-between px-5 py-3 border-b border-gray-50">
                   <View className="flex-row items-center gap-3">
                     <Text className="text-xl w-8 text-center">{rankBadge(Number(entry.rank))}</Text>
@@ -148,7 +185,7 @@ export default function TeamPage() {
                       <Text className="font-medium text-gray-800">{entry.username}</Text>
                     </Link>
                   </View>
-                  <Text className="font-bold text-blue-600">{entry.total_points} pts</Text>
+                  <Text className="font-bold text-blue-600">{formatDistance(Number(entry.total_points), 'km')} km</Text>
                 </View>
               ))
             )}

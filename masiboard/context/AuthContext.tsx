@@ -7,6 +7,7 @@ interface User {
   name: string;
   username: string;
   userId: number;
+  unit?: string;
 }
 
 interface AuthContextType {
@@ -43,7 +44,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     setUser(null);
-    await AsyncStorage.multiRemove(['user', 'authToken']);
+    // await AsyncStorage.multiRemove(['user', 'authToken']);
+    await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem('authToken');
   };
 
   const updateUser = async (updatedUser: User) => {

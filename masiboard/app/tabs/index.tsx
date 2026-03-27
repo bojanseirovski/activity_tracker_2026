@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, FlatList, ActivityIndicator, Modal, ScrollView } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ModalMessage from '../../components/common/ModalMessage';
 import ErrorMessage from '../../components/common/ErrorMessage';
@@ -8,6 +8,7 @@ import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
+import { formatDistance } from '../../utils/distance';
 
 interface LeaderboardEntry {
   id: number;
@@ -18,6 +19,8 @@ interface LeaderboardEntry {
   activity_type: string;
   like_count?: number;
   liked_by_me?: boolean;
+  image_url?: string | null;
+  unit?: string;
 }
 
 interface LikeUser { user_id: number; username: string; }
@@ -43,6 +46,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const router = useRouter();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editPoints, setEditPoints] = useState('');
   const [modal, setModal] = useState<ModalState>(null);
@@ -170,7 +174,7 @@ export default function LeaderboardPage() {
     const isEditing = editingId === entry.id;
 
     return (
-      <View className="flex-row items-center justify-between p-4 bg-white rounded-xl shadow-sm mb-3 mx-4">
+      <Pressable onPress={() => !isEditing && router.push(`/entries/${entry.id}`)} className="flex-row items-center justify-between p-4 bg-white rounded-xl shadow-sm mb-3 mx-4">
         {isEditing ? (
           <View className="flex-1">
             <View className="flex-row items-center justify-between mb-3">
@@ -202,10 +206,10 @@ export default function LeaderboardPage() {
                 )}
               </View>
               <View className="flex-1">
-                <Link href={`/users/${entry.user_id}`}>
-                  <Text className="text-base font-semibold text-blue-600">{entry.name}</Text>
+                <Link href={`/entries/${entry.id}`}>
+                  <Text className="text-base font-semibold text-blue-600">{entry.activity_type}</Text>
                 </Link>
-                <Text className="text-xs text-gray-500">{entry.activity_type}</Text>
+                <Text className="text-xs text-gray-500">{entry.name}</Text>
                 <Text className="text-xs text-gray-400">{new Date(entry.date).toLocaleDateString()}</Text>
               </View>
             </View>
@@ -231,8 +235,8 @@ export default function LeaderboardPage() {
               )}
 
               <View className="items-end">
-                <Text className="text-xl font-bold text-gray-800">{entry.points}</Text>
-                <Text className="text-xs text-gray-500">pts</Text>
+                <Text className="text-xl font-bold text-gray-800">{formatDistance(entry.points, entry.unit || 'km')}</Text>
+                <Text className="text-xs text-gray-500">{entry.unit || 'km'}</Text>
               </View>
 
               {user && user.id === entry.user_id && (
@@ -248,7 +252,7 @@ export default function LeaderboardPage() {
             </View>
           </>
         )}
-      </View>
+      </Pressable>
     );
   };
 

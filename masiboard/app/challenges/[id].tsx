@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import ModalMessage from '../../components/common/ModalMessage';
+import ImageUpload from '../../components/common/ImageUpload';
 import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
+import { formatDistance } from '../../utils/distance';
 
 interface ChallengeDetail {
   id: number;
@@ -18,8 +20,11 @@ interface ChallengeDetail {
   member_count: number;
   total_points: number;
   is_member: boolean;
+  image_url: string | null;
+  createdBy: number;
 }
 interface LeaderboardEntry { id: number; username: string; total_points: number; rank: number; }
+interface ChallengeStats { total_distance: number; top_users: LeaderboardEntry[]; }
 type ModalState = { isOpen: boolean; message: string; type: 'success' | 'error' } | null;
 
 const rankBadge = (rank: number) =>
@@ -34,6 +39,7 @@ export default function ChallengePage() {
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  const [stats, setStats] = useState<ChallengeStats | null>(null);
 
   const fetchData = () => {
     setLoading(true);
@@ -41,10 +47,12 @@ export default function ChallengePage() {
     Promise.all([
       apiClient.get(API.CHALLENGE(Number(id))),
       apiClient.get(API.CHALLENGE_LEADERBOARD(Number(id))),
+      apiClient.get(API.CHALLENGE_STATS(Number(id))),
     ])
-      .then(([cRes, lRes]) => {
+      .then(([cRes, lRes, sRes]) => {
         setChallenge(cRes.data);
         setLeaderboard(lRes.data);
+        setStats(sRes.data);
       })
       .catch(() => setError(MESSAGES.CHALLENGE_LOAD_ERROR))
       .finally(() => setLoading(false));
@@ -98,7 +106,21 @@ export default function ChallengePage() {
         <View className="gap-5">
           <View className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <View className="p-6" style={{ backgroundColor: '#3b82f6' }}>
-              <Text className="text-2xl font-bold text-white mb-1">{challenge.title}</Text>
+              <View className="flex-row items-center gap-4 mb-2">
+                {user && user.id === challenge.createdBy ? (
+                  <ImageUpload
+                    entityType="challenge"
+                    entityId={challenge.id}
+                    currentImageUrl={challenge.image_url}
+                    onUploadSuccess={(url) => setChallenge(prev => prev ? { ...prev, image_url: url } : prev)}
+                  />
+                ) : challenge.image_url ? (
+                  <Image source={{ uri: challenge.image_url }} style={{ width: 80, height: 80, borderRadius: 8 }} />
+                ) : null}
+                <View className="flex-1">
+                  <Text className="text-2xl font-bold text-white mb-1">{challenge.title}</Text>
+                </View>
+              </View>
               <View className="flex-row flex-wrap items-center gap-2 mt-2">
                 {challenge.activity_type_name && (
                   <View className="px-3 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
@@ -115,8 +137,10 @@ export default function ChallengePage() {
                   <Text className="text-sm text-gray-500 mt-1">Members Joined</Text>
                 </View>
                 <View className="flex-1 bg-gray-50 rounded-xl p-4 items-center">
-                  <Text className="text-3xl font-bold text-gray-800">{challenge.total_points}</Text>
-                  <Text className="text-sm text-gray-500 mt-1">Total Points</Text>
+                  <Text className="text-3xl font-bold text-gray-800">
+                    {stats ? formatDistance(stats.total_distance, 'km') : challenge.total_points}
+                  </Text>
+                  <Text className="text-sm text-gray-500 mt-1">{stats ? 'Total Distance (km)' : 'Total Points'}</Text>
                 </View>
               </View>
               {user && (
@@ -138,14 +162,14 @@ export default function ChallengePage() {
 
           <View className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <View className="p-5 border-b border-gray-100">
-              <Text className="text-lg font-bold text-gray-800">Leaderboard</Text>
+              <Text className="text-lg font-bold text-gray-800">Top 20 Leaderboard</Text>
             </View>
-            {leaderboard.length === 0 ? (
+            {(stats?.top_users ?? leaderboard).length === 0 ? (
               <View className="p-10 items-center">
                 <Text className="text-gray-500">No participants yet. Be the first to join and submit!</Text>
               </View>
             ) : (
-              leaderboard.map(entry => (
+              (stats?.top_users ?? leaderboard).slice(0, 20).map(entry => (
                 <View key={entry.id} className="flex-row items-center justify-between px-5 py-3 border-b border-gray-50">
                   <View className="flex-row items-center gap-3">
                     <Text className="text-xl w-8 text-center">{rankBadge(Number(entry.rank))}</Text>
@@ -153,7 +177,7 @@ export default function ChallengePage() {
                       <Text className="font-medium text-gray-800">{entry.username}</Text>
                     </Link>
                   </View>
-                  <Text className="font-bold text-blue-600">{entry.total_points} pts</Text>
+                  <Text className="font-bold text-blue-600">{formatDistance(Number(entry.total_points), 'km')} km</Text>
                 </View>
               ))
             )}

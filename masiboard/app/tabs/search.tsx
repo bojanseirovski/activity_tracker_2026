@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import apiClient from '../../api/client';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
+import { formatDistance } from '../../utils/distance';
 
 interface SearchResult {
+  id: number;
   name: string;
   points: number;
   activity_type_name: string;
+  image_url?: string | null;
+  unit?: string;
 }
 
 export default function SearchPage() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,19 +43,19 @@ export default function SearchPage() {
     <View className="flex-1 bg-gray-50">
       <FlatList
         data={results}
-        keyExtractor={(_, i) => String(i)}
+        keyExtractor={item => String(item.id)}
         renderItem={({ item }) => (
-          <View className="flex-row items-center justify-between p-4 border border-gray-200 rounded-lg bg-white mb-2 mx-4">
+          <Pressable onPress={() => router.push(`/entries/${item.id}`)} className="flex-row items-center justify-between p-4 border border-gray-200 rounded-lg bg-white mb-2 mx-4">
             <Text className="text-base font-semibold text-gray-800 flex-1">{item.name}</Text>
             <View className="items-center mx-4">
               <Text className="text-sm font-medium text-gray-700">{item.activity_type_name}</Text>
               <Text className="text-xs text-gray-400">Activity</Text>
             </View>
             <View className="items-end">
-              <Text className="text-lg font-bold text-gray-800">{item.points}</Text>
-              <Text className="text-xs text-gray-500">Points</Text>
+              <Text className="text-lg font-bold text-gray-800">{formatDistance(item.points, item.unit || 'km')}</Text>
+              <Text className="text-xs text-gray-500">{item.unit || 'km'}</Text>
             </View>
-          </View>
+          </Pressable>
         )}
         ListHeaderComponent={
           <View className="px-4 pt-6 pb-4">

@@ -8,6 +8,8 @@ export const MESSAGES = {
     ENTRY_UPDATE_ERROR: 'Failed to update entry. Please try again.',
     ENTRY_ADD_SUCCESS: 'Entry added successfully!',
     ENTRY_ADD_ERROR: 'Failed to add entry.',
+    ENTRY_LOAD_ERROR: 'Failed to load entry.',
+    IMAGE_UPLOAD_ERROR: 'Failed to upload image.',
 
     // Activity Types
     ACTIVITY_TYPES_LOAD_ERROR: 'Failed to load activity types. Please try again later.',

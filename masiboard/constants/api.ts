@@ -24,4 +24,10 @@ export const API = {
     TEAM: (id: number) => `/api/teams/${id}`,
     TEAM_JOIN: (id: number) => `/api/teams/${id}/join`,
     TEAM_LEADERBOARD: (id: number) => `/api/teams/${id}/leaderboard`,
+    USER_STATS: (id: number) => `/api/users/${id}/stats`,
+    CHALLENGE_STATS: (id: number) => `/api/challenges/${id}/stats`,
+    TEAM_STATS: (id: number) => `/api/teams/${id}/stats`,
+    IMAGE_UPLOAD: '/api/images/upload',
+    IMAGES: (entityType: string, entityId: number) => `/api/images?entity_type=${entityType}&entity_id=${entityId}`,
+    IMAGE_DELETE: (id: number) => `/api/images/${id}`,
 };

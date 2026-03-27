@@ -7,6 +7,7 @@ import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
+import { toRawDistance } from '../../utils/distance';
 
 interface ActivityType { id: number; name: string; }
 interface ChallengeOption { id: number; title: string; activity_type_id: number | null; }
@@ -14,6 +15,7 @@ interface TeamOption { id: number; title: string; activity_type_id: number | nul
 
 export default function AddEntryPage() {
   const { user } = useAuth();
+  const unit = user?.unit || 'km';
   const today = new Date().toISOString().split('T')[0];
 
   const [points, setPoints] = useState('0');
@@ -51,7 +53,7 @@ export default function AddEntryPage() {
     try {
       await apiClient.post(API.ENTRIES, {
         name: user?.username,
-        points: Number(points),
+        points: toRawDistance(Number(points), unit),
         date,
         activity_type_id: activityTypeId || null,
         challenge_ids: selectedChallengeIds,
@@ -108,7 +110,7 @@ export default function AddEntryPage() {
             </View>
 
             <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1">Points</Text>
+              <Text className="text-sm font-medium text-gray-700 mb-1">Distance ({unit})</Text>
               <TextInput
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                 value={points}
