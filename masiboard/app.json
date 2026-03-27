@@ -30,7 +30,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      "@react-native-async-storage/async-storage"
     ],
     "extra": {
       "router": {},
