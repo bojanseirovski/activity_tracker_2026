@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "masiboard-app",
-    "slug": "masiboard-app",
+    "name": "masiboard",
+    "slug": "masiboard",
     "scheme": "masiboard",
     "version": "1.0.0",
     "orientation": "portrait",
