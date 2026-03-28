@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "masiboard",
+    "name": "ActivityTracker2026",
     "slug": "masiboard",
     "scheme": "masiboard",
     "version": "1.0.0",
@@ -18,15 +18,15 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/logo512.png",
         "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "monochromeImage": "./assets/logo512.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.seirovski.masiboard"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.ico"
     },
     "plugins": [
       "expo-router",
