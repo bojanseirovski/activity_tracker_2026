@@ -23,7 +23,11 @@
         "monochromeImage": "./assets/logo512.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.seirovski.masiboard"
+      "package": "com.seirovski.masiboard",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,6 +48,7 @@
       "eas": {
         "projectId": "b36dd0bb-8a74-4cb6-a465-2baa5b6e7c18"
       }
-    }
+    },
+    "owner": "bojanmasitech"
   }
 }
