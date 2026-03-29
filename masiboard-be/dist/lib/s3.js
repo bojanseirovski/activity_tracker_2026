@@ -12,32 +12,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadToS3 = uploadToS3;
 exports.deleteFromS3 = deleteFromS3;
 const client_s3_1 = require("@aws-sdk/client-s3");
-const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET || '';
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
-const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID || '';
-const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY || '';
+const A_S3_BUCKET = process.env.A_S3_BUCKET || '';
+const A_REGION = process.env.A_REGION || 'us-east-1';
+const A_ACCESS_KEY_ID = process.env.A_ACCESS_KEY_ID || '';
+const A_SECRET_ACCESS_KEY = process.env.A_SECRET_ACCESS_KEY || '';
 const s3 = new client_s3_1.S3Client({
-    region: AWS_REGION,
+    region: A_REGION,
     credentials: {
-        accessKeyId: AWS_ACCESS_KEY_ID,
-        secretAccessKey: AWS_SECRET_ACCESS_KEY,
+        accessKeyId: A_ACCESS_KEY_ID,
+        secretAccessKey: A_SECRET_ACCESS_KEY,
     },
 });
 function uploadToS3(key, body, contentType) {
     return __awaiter(this, void 0, void 0, function* () {
         yield s3.send(new client_s3_1.PutObjectCommand({
-            Bucket: AWS_S3_BUCKET,
+            Bucket: A_S3_BUCKET,
             Key: key,
             Body: body,
             ContentType: contentType,
         }));
-        return `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+        return `https://${A_S3_BUCKET}.s3.${A_REGION}.amazonaws.com/${key}`;
     });
 }
 function deleteFromS3(key) {
     return __awaiter(this, void 0, void 0, function* () {
         yield s3.send(new client_s3_1.DeleteObjectCommand({
-            Bucket: AWS_S3_BUCKET,
+            Bucket: A_S3_BUCKET,
             Key: key,
         }));
     });

@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
 import { formatDistance, toDisplayDistance, toRawDistance } from '../../utils/distance';
+import TrackMap from '../../components/map/TrackMap';
 
 interface EntryDetail {
   id: number;
@@ -23,6 +24,7 @@ interface EntryDetail {
   activity_type: string | null;
   image_url: string | null;
   unit?: string;
+  tracking_data?: { latitude: number; longitude: number }[] | null;
 }
 
 interface LikesData {
@@ -212,10 +214,18 @@ export default function EntryPage() {
                     <Text className="text-2xl font-bold text-white mb-1">{entry.activity_type}</Text>
                   )}
                   <View className="flex-row flex-wrap items-center gap-2">
-                    <Link href={`/users/${entry.userId}`}>
-                      <Text className="text-blue-100 text-sm font-medium underline">{entry.name}</Text>
+                    <Link href={`/users/${entry.userId}`} asChild>
+                      <Pressable className="bg-blue-600 px-4 py-2 rounded-full shadow active:opacity-80">
+                        <Text className="text-blue-100 text-xl font-medium">{entry.name}</Text>
+                      </Pressable>
                     </Link>
-                    <Text className="text-blue-100 text-sm">{new Date(entry.date).toLocaleDateString()}</Text>
+                    <Text className="text-blue-100 text-xl">
+                      {new Date(entry.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -353,6 +363,12 @@ export default function EntryPage() {
               )}
             </View>
           </View>
+
+          {entry.tracking_data && entry.tracking_data.length > 1 && (
+            <View className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ height: 300 }}>
+              <TrackMap path={entry.tracking_data} />
+            </View>
+          )}
         </View>
       )}
 

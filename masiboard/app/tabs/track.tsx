@@ -1,0 +1,257 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, Pressable, Alert, Platform } from 'react-native';
+import apiClient from '../../api/client';
+import { API } from '../../constants/api';
+import { useAuth } from '../../context/AuthContext';
+import * as Location from 'expo-location';
+import TrackMap from '../../components/map/TrackMap';
+import { Picker } from '@react-native-picker/picker';
+
+type Coord = { latitude: number; longitude: number };
+interface ActivityType { id: number; name: string; }
+
+function haversineDistance(coords: Coord[]): number {
+  let total = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const R = 6371000;
+    const dLat = ((coords[i].latitude - coords[i - 1].latitude) * Math.PI) / 180;
+    const dLon = ((coords[i].longitude - coords[i - 1].longitude) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((coords[i - 1].latitude * Math.PI) / 180) *
+        Math.cos((coords[i].latitude * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  return total;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(2)} km`;
+}
+
+export default function TrackScreen() {
+  const [tracking, setTracking] = useState(false);
+  const [stopped, setStopped] = useState(false);
+  const [path, setPath] = useState<Coord[]>([]);
+  const [elapsed, setElapsed] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
+  const [activityTypeId, setActivityTypeId] = useState<number | ''>('');
+  const { user } = useAuth();
+
+  const startTimeRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      locationSubRef.current?.remove();
+      if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    apiClient.get(API.ACTIVITY_TYPES, { params: { userId: user?.id } })
+      .then(res => setActivityTypes(res.data))
+      .catch(() => {});
+  }, [user?.id]);
+
+  const handleStart = async () => {
+    setError(null);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setError('Location permission is required to track activities.');
+      return;
+    }
+
+    setPath([]);
+    setElapsed(0);
+    setStopped(false);
+    setTracking(true);
+    startTimeRef.current = Date.now();
+
+    timerRef.current = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+
+    const onLocation = (loc: Location.LocationObject) => {
+      setPath((prev) => [
+        ...prev,
+        { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
+      ]);
+    };
+
+    if (Platform.OS === 'web') {
+      locationSubRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High },
+        onLocation,
+      );
+      locationIntervalRef.current = setInterval(async () => {
+        const loc = await Location.getLastKnownPositionAsync();
+        if (loc) {
+          setPath((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.latitude === loc.coords.latitude && last.longitude === loc.coords.longitude) {
+              return prev;
+            }
+            return [...prev, { latitude: loc.coords.latitude, longitude: loc.coords.longitude }];
+          });
+        }
+      }, 3000);
+    } else {
+      locationSubRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 0 },
+        onLocation,
+      );
+    }
+  };
+
+  const handleStop = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    locationSubRef.current?.remove();
+    if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    timerRef.current = null;
+    locationSubRef.current = null;
+    locationIntervalRef.current = null;
+    setTracking(false);
+    setStopped(true);
+  };
+
+  const handleReset = () => {
+    setPath([]);
+    setElapsed(0);
+    setStopped(false);
+    setError(null);
+    setActivityTypeId('');
+  };
+
+  const distance = haversineDistance(path);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiClient.post(API.ENTRIES, {
+        name: user?.username,
+        points: Math.round(distance),
+        date: new Date().toISOString().split('T')[0],
+        activity_type_id: activityTypeId || null,
+        tracking_data: path.length > 1 ? path : null,
+      });
+      Alert.alert('Success', 'Activity saved!');
+      handleReset();
+    } catch {
+      Alert.alert('Error', 'Failed to save activity.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <View className="flex-1 bg-gray-50">
+      <View className="bg-white rounded-xl shadow-sm p-5 mx-4 mt-4 mb-3">
+        <Text className="text-2xl font-bold text-gray-800 text-center mb-4">
+          Activity Tracker
+        </Text>
+
+        <View className="flex-row justify-around mb-4">
+          <View className="items-center">
+            <Text className="text-sm text-gray-500">Time</Text>
+            <Text className="text-3xl font-bold text-gray-800">{formatTime(elapsed)}</Text>
+          </View>
+          <View className="items-center">
+            <Text className="text-sm text-gray-500">Distance</Text>
+            <Text className="text-3xl font-bold text-gray-800">{formatDistance(distance)}</Text>
+          </View>
+          <View className="items-center">
+            <Text className="text-sm text-gray-500">Points</Text>
+            <Text className="text-3xl font-bold text-gray-800">{path.length}</Text>
+          </View>
+        </View>
+
+        {error && (
+          <Text className="text-red-500 text-center mb-3">{error}</Text>
+        )}
+
+        {!tracking && !stopped && (
+          <>
+            <View className="mb-4">
+              <Text className="text-sm text-gray-500 mb-1">Activity Type</Text>
+              <View className="border border-gray-300 rounded-lg">
+                <Picker selectedValue={activityTypeId} onValueChange={setActivityTypeId}>
+                  <Picker.Item label="Select an activity type" value="" />
+                  {activityTypes.map(t => (
+                    <Picker.Item key={t.id} label={t.name} value={t.id} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+            <Pressable
+              className="bg-blue-500 rounded-lg py-4 items-center"
+              onPress={handleStart}
+            >
+              <Text className="text-white text-lg font-bold">Start</Text>
+            </Pressable>
+          </>
+        )}
+
+        {tracking && (
+          <Pressable
+            className="bg-red-500 rounded-lg py-4 items-center"
+            onPress={handleStop}
+          >
+            <Text className="text-white text-lg font-bold">Stop</Text>
+          </Pressable>
+        )}
+
+        {stopped && (
+          <>
+            <Pressable
+              className="bg-gray-500 rounded-lg py-4 items-center"
+              onPress={handleReset}
+            >
+              <Text className="text-white text-lg font-bold">Reset</Text>
+            </Pressable>
+            <Pressable
+              className={`${saving ? 'bg-green-300' : 'bg-green-500'} rounded-lg py-4 items-center mt-3`}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text className="text-white text-lg font-bold">{saving ? 'Saving...' : 'Save Activity'}</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+
+      {stopped && path.length > 0 && (
+        <View className="flex-1 mx-4 mb-4 rounded-xl overflow-hidden">
+          <TrackMap path={path} />
+        </View>
+      )}
+
+      {stopped && path.length === 0 && (
+        <View className="flex-1 items-center justify-center mx-4">
+          <Text className="text-gray-400 text-lg">No location data recorded.</Text>
+        </View>
+      )}
+
+      {!stopped && !tracking && (
+        <View className="flex-1 items-center justify-center mx-4">
+          <Text className="text-gray-400 text-lg text-center">
+            Press Start to begin tracking your activity.
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}

@@ -25,7 +25,7 @@ function buildOrderClause(sort, order) {
 }
 // Create entry
 router.post('/entries', auth_1.requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, points, date, activity_type_id, challenge_ids, team_ids } = req.body;
+    const { name, points, date, activity_type_id, challenge_ids, team_ids, tracking_data } = req.body;
     try {
         const result = yield db_1.db.transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             const rows = yield tx.insert(schema_1.entries).values({
@@ -34,6 +34,7 @@ router.post('/entries', auth_1.requireAuth, (req, res) => __awaiter(void 0, void
                 date,
                 activityTypeId: activity_type_id !== null && activity_type_id !== void 0 ? activity_type_id : null,
                 userId: req.userId,
+                trackingData: tracking_data !== null && tracking_data !== void 0 ? tracking_data : null,
             }).returning({ id: schema_1.entries.id });
             const entryId = rows[0].id;
             if (Array.isArray(challenge_ids)) {
@@ -147,6 +148,7 @@ router.get('/entries/:id', (req, res) => __awaiter(void 0, void 0, void 0, funct
             activity_type: schema_1.activityTypes.name,
             image_url: schema_1.images.url,
             unit: schema_1.userPreferences.unit,
+            tracking_data: schema_1.entries.trackingData,
         })
             .from(schema_1.entries)
             .leftJoin(schema_1.activityTypes, (0, drizzle_orm_1.eq)(schema_1.activityTypes.id, schema_1.entries.activityTypeId))

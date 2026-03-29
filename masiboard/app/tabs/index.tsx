@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
 import { formatDistance } from '../../utils/distance';
+import TrackMap from '../../components/map/TrackMap';
 
 interface LeaderboardEntry {
   id: number;
@@ -21,6 +22,7 @@ interface LeaderboardEntry {
   liked_by_me?: boolean;
   image_url?: string | null;
   unit?: string;
+  tracking_data?: { latitude: number; longitude: number }[] | null;
 }
 
 interface LikeUser { user_id: number; username: string; }
@@ -69,7 +71,7 @@ export default function LeaderboardPage() {
     if (pageNum === 1) setError(null);
     try {
       const { data } = await apiClient.get(API.LEADERBOARD, {
-        params: { userId: user?.id, page: pageNum, limit: PAGE_SIZE }
+        params: { userId: user?.id, page: pageNum, limit: PAGE_SIZE, sort: 'id desc' }
       });
       const incoming: LeaderboardEntry[] = data;
       setEntries(prev => pageNum === 1 ? incoming : [...prev, ...incoming]);
@@ -174,7 +176,8 @@ export default function LeaderboardPage() {
     const isEditing = editingId === entry.id;
 
     return (
-      <Pressable onPress={() => !isEditing && router.push(`/entries/${entry.id}`)} className="flex-row items-center justify-between p-4 bg-white rounded-xl shadow-sm mb-3 mx-4">
+      <View className="bg-white rounded-xl shadow-sm mb-3 mx-4 overflow-hidden">
+      <Pressable onPress={() => !isEditing && router.push(`/entries/${entry.id}`)} className="flex-row items-center justify-between p-4">
         {isEditing ? (
           <View className="flex-1">
             <View className="flex-row items-center justify-between mb-3">
@@ -210,7 +213,13 @@ export default function LeaderboardPage() {
                   <Text className="text-base font-semibold text-blue-600">{entry.activity_type}</Text>
                 </Link>
                 <Text className="text-xs text-gray-500">{entry.name}</Text>
-                <Text className="text-xs text-gray-400">{new Date(entry.date).toLocaleDateString()}</Text>
+                <Text className="text-xs text-gray-400">
+                  {new Date(entry.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </Text>
               </View>
             </View>
 
@@ -253,6 +262,12 @@ export default function LeaderboardPage() {
           </>
         )}
       </Pressable>
+      {entry.tracking_data && entry.tracking_data.length > 1 && (
+        <View style={{ height: 200 }}>
+          <TrackMap path={entry.tracking_data} />
+        </View>
+      )}
+      </View>
     );
   };
 

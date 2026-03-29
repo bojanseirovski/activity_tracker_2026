@@ -18,7 +18,7 @@ function buildOrderClause(sort: string | undefined, order: string | undefined): 
 
 // Create entry
 router.post('/entries', requireAuth, async (req, res) => {
-    const { name, points, date, activity_type_id, challenge_ids, team_ids } = req.body;
+    const { name, points, date, activity_type_id, challenge_ids, team_ids, tracking_data } = req.body;
 
     try {
         const result = await db.transaction(async (tx) => {
@@ -28,6 +28,7 @@ router.post('/entries', requireAuth, async (req, res) => {
                 date,
                 activityTypeId: activity_type_id ?? null,
                 userId: req.userId,
+                trackingData: tracking_data ?? null,
             }).returning({ id: entries.id });
             const entryId = rows[0].id;
 
@@ -142,6 +143,7 @@ router.get('/entries/:id', async (req, res) => {
             activity_type: activityTypes.name,
             image_url: images.url,
             unit: userPreferences.unit,
+            tracking_data: entries.trackingData,
         })
         .from(entries)
         .leftJoin(activityTypes, eq(activityTypes.id, entries.activityTypeId))

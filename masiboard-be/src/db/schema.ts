@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, primaryKey, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, primaryKey, boolean, jsonb } from 'drizzle-orm/pg-core';
 
 // ── Users ──────────────────────────────────────────────────────────────
 export const users = pgTable('users', {
@@ -24,6 +24,7 @@ export const entries = pgTable('entries', {
     date: text('date').notNull(),
     activityTypeId: integer('activity_type_id').references(() => activityTypes.id),
     userId: integer('user_id').references(() => users.id),
+    trackingData: jsonb('tracking_data'),
 });
 
 // ── Entry Likes ─────────────────────────────────────────────────────────

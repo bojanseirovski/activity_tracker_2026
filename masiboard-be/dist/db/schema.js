@@ -24,6 +24,7 @@ exports.entries = (0, pg_core_1.pgTable)('entries', {
     date: (0, pg_core_1.text)('date').notNull(),
     activityTypeId: (0, pg_core_1.integer)('activity_type_id').references(() => exports.activityTypes.id),
     userId: (0, pg_core_1.integer)('user_id').references(() => exports.users.id),
+    trackingData: (0, pg_core_1.jsonb)('tracking_data'),
 });
 // ── Entry Likes ─────────────────────────────────────────────────────────
 exports.entryLikes = (0, pg_core_1.pgTable)('entry_likes', {

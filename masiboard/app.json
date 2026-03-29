@@ -30,7 +30,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ActivityTracker to access your location to track activities.",
+          "locationWhenInUsePermission": "Allow ActivityTracker to access your location to track activities."
+        }
+      ]
     ],
     "extra": {
       "router": {},
