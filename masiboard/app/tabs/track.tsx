@@ -4,8 +4,12 @@ import apiClient from '../../api/client';
 import { API } from '../../constants/api';
 import { useAuth } from '../../context/AuthContext';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
+import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import TrackMap from '../../components/map/TrackMap';
 import { Picker } from '@react-native-picker/picker';
+import { LOCATION_TASK, TRACKING_PATH_KEY } from '../../tasks/locationTask';
 
 type Coord = { latitude: number; longitude: number };
 interface ActivityType { id: number; name: string; }
@@ -50,14 +54,15 @@ export default function TrackScreen() {
 
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
-  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      locationSubRef.current?.remove();
-      if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
+      TaskManager.isTaskRegisteredAsync(LOCATION_TASK).then((registered) => {
+        if (registered) Location.stopLocationUpdatesAsync(LOCATION_TASK);
+      });
     };
   }, []);
 
@@ -69,61 +74,77 @@ export default function TrackScreen() {
 
   const handleStart = async () => {
     setError(null);
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
+
+    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+    if (fgStatus !== 'granted') {
       setError('Location permission is required to track activities.');
       return;
     }
 
+    const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+    if (bgStatus !== 'granted') {
+      setError('Background location permission is required to track while the app is minimized.');
+      return;
+    }
+
+    await AsyncStorage.removeItem(TRACKING_PATH_KEY);
     setPath([]);
     setElapsed(0);
     setStopped(false);
     setTracking(true);
     startTimeRef.current = Date.now();
 
+    await Location.startLocationUpdatesAsync(LOCATION_TASK, {
+      accuracy: Location.Accuracy.BestForNavigation,
+      timeInterval: 1500,
+      distanceInterval: 1,
+      foregroundService: {
+        notificationTitle: 'Tracking Activity',
+        notificationBody: 'Tap to return to the app',
+        notificationColor: '#3b82f6',
+      },
+      pausesUpdatesAutomatically: false,
+      showsBackgroundLocationIndicator: true,
+    });
+
+    if (Platform.OS === 'ios') {
+      await Notifications.requestPermissionsAsync();
+      await Notifications.scheduleNotificationAsync({
+        content: { title: 'Tracking Activity', body: 'Tap to return to the app' },
+        trigger: null,
+      });
+    }
+
     timerRef.current = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
 
-    const onLocation = (loc: Location.LocationObject) => {
-      setPath((prev) => [
-        ...prev,
-        { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
-      ]);
-    };
-
-    if (Platform.OS === 'web') {
-      locationSubRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High },
-        onLocation,
-      );
-      locationIntervalRef.current = setInterval(async () => {
-        const loc = await Location.getLastKnownPositionAsync();
-        if (loc) {
-          setPath((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.latitude === loc.coords.latitude && last.longitude === loc.coords.longitude) {
-              return prev;
-            }
-            return [...prev, { latitude: loc.coords.latitude, longitude: loc.coords.longitude }];
-          });
-        }
-      }, 3000);
-    } else {
-      locationSubRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 0 },
-        onLocation,
-      );
-    }
+    pollRef.current = setInterval(async () => {
+      const raw = await AsyncStorage.getItem(TRACKING_PATH_KEY);
+      if (raw) setPath(JSON.parse(raw));
+    }, 2000);
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    locationSubRef.current?.remove();
-    if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    if (pollRef.current) clearInterval(pollRef.current);
     timerRef.current = null;
-    locationSubRef.current = null;
-    locationIntervalRef.current = null;
+    pollRef.current = null;
+
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK);
+    if (isRegistered) {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+    }
+
+    if (Platform.OS === 'ios') {
+      await Notifications.dismissAllNotificationsAsync();
+    }
+
+    const raw = await AsyncStorage.getItem(TRACKING_PATH_KEY);
+    const finalPath: Coord[] = raw ? JSON.parse(raw) : [];
+    await AsyncStorage.removeItem(TRACKING_PATH_KEY);
+
+    setPath(finalPath);
     setTracking(false);
     setStopped(true);
   };
