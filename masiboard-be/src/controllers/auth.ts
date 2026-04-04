@@ -30,6 +30,20 @@ router.post('/register', async (req, res) => {
         const rows = await db.insert(users).values({ username, email, password: hashedPassword }).returning({ id: users.id });
         const token = jwt.sign({ userId: rows[0].id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
         res.status(201).json({ message: 'User registered successfully', token });
+
+        // Send welcome email (fire and forget)
+        try {
+            const mailerSend = new MailerSend({ apiKey: process.env.MAILERSEND_API_KEY || '' });
+            const emailParams = new EmailParams()
+                .setFrom(new Sender(process.env.MAILERSEND_FROM_EMAIL || 'noreply@example.com', 'Masiboard'))
+                .setTo([new Recipient(email, username)])
+                .setSubject('Welcome to Masiboard!')
+                .setHtml(`<p>Hi ${username},</p><p>Welcome to Masiboard! Your account is ready — start logging your activities and climb the leaderboard.</p>`)
+                .setText(`Hi ${username},\n\nWelcome to Masiboard! Your account is ready — start logging your activities and climb the leaderboard.`);
+            await mailerSend.email.send(emailParams);
+        } catch (err: any) {
+            console.error('Welcome email error:', err);
+        }
     } catch (err: any) {
         if (err.code === '23505') {
             if (err.constraint?.includes('email')) return res.status(400).json({ error: 'Email already exists' });
