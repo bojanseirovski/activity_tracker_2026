@@ -34,12 +34,6 @@ interface LikesState {
   loadingUsers: boolean;
 }
 
-interface TopPerformer {
-  user_id: number;
-  username: string;
-  total_points: number;
-}
-
 const PAGE_SIZE = 10;
 type ModalState = { isOpen: boolean; message: string; type: 'success' | 'error' | 'confirm'; onConfirm?: () => void } | null;
 
@@ -55,16 +49,8 @@ export default function LeaderboardPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [top3, setTop3] = useState<TopPerformer[]>([]);
   const [likesMap, setLikesMap] = useState<Record<number, LikesState>>({});
   const [likesModal, setLikesModal] = useState<{ entryId: number } | null>(null);
-
-  const fetchTopPerformers = async () => {
-    try {
-      const { data } = await apiClient.get(API.TOP_PERFORMERS, { params: { limit: 3 } });
-      setTop3(data);
-    } catch { /* ignore */ }
-  };
 
   const fetchLeaderboard = useCallback(async (pageNum = 1) => {
     pageNum === 1 ? setLoading(true) : setLoadingMore(true);
@@ -94,7 +80,6 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     fetchLeaderboard(1);
-    fetchTopPerformers();
   }, []);
 
   const handleLoadMore = () => {
@@ -323,38 +308,14 @@ export default function LeaderboardPage() {
           onEndReachedThreshold={0.3}
           ListHeaderComponent={
             <View className="px-4 pt-6 pb-4">
-              <Text className="text-3xl font-bold text-gray-800 text-center mb-1">Leaderboard</Text>
+              {/* <Text className="text-3xl font-bold text-gray-800 text-center mb-1">Leaderboard</Text>
               <Text className="text-gray-500 text-center mb-6">Top performers ranked by points</Text>
-
-              {top3.length > 0 && (
-                <View className="bg-white rounded-2xl shadow-md p-4 mb-6">
-                  <Text className="text-base font-bold text-gray-800 text-center mb-4">Top Performers</Text>
-                  <View className="flex-row items-end justify-center gap-4" style={{ height: 120 }}>
-                    {[top3[1], top3[0], top3[2]].filter(Boolean).map((entry, podiumIndex) => {
-                      const rank = podiumIndex === 1 ? 0 : podiumIndex === 0 ? 1 : 2;
-                      const maxPoints = top3[0]?.total_points || 1;
-                      const heightPct = (entry.total_points / maxPoints) * 100;
-                      const colors = ['#9ca3af', '#eab308', '#f97316'];
-                      return (
-                        <View key={entry.user_id} className="items-center" style={{ minWidth: 72 }}>
-                          <Link href={`/users/${entry.user_id}`}>
-                            <Text className="text-xs font-semibold text-blue-600 text-center mb-0.5">{entry.username}</Text>
-                          </Link>
-                          <Text className="text-sm font-bold text-gray-800">{entry.total_points}</Text>
-                          <View style={{ width: 48, height: Math.max(20, heightPct * 0.8), backgroundColor: colors[rank], borderRadius: 4 }} />
-                          <Text className="text-base mt-1">{medals[rank]}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
 
               <View className="flex-row justify-between mb-2">
                 <Link href="/tabs/search">
                   <Text className="text-blue-600 font-medium">Search entries</Text>
                 </Link>
-              </View>
+              </View> */}
             </View>
           }
           ListFooterComponent={

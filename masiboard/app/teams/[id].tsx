@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import ModalMessage from '../../components/common/ModalMessage';
@@ -58,6 +60,12 @@ export default function TeamPage() {
   };
 
   useEffect(() => { fetchData(); }, [id]);
+
+  const handleShare = async () => {
+    const url = Linking.createURL(`/teams/${id}`);
+    await Clipboard.setStringAsync(url);
+    setModal({ isOpen: true, message: 'Team link copied to clipboard!', type: 'success' });
+  };
 
   const handleJoin = async () => {
     if (!team) return;
@@ -117,7 +125,12 @@ export default function TeamPage() {
                   <Image source={{ uri: team.image_url }} style={{ width: 80, height: 80, borderRadius: 8 }} />
                 ) : null}
                 <View className="flex-1">
-                  <Text className="text-2xl font-bold text-white mb-1">{team.title}</Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-2xl font-bold text-white mb-1">{team.title}</Text>
+                    <Pressable onPress={handleShare} hitSlop={8} className="mb-1">
+                      <Ionicons name="share-social-outline" size={18} color="rgba(255,255,255,0.8)" />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
               {team.activity_type_name && (

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import ModalMessage from '../../components/common/ModalMessage';
 import ImageUpload from '../../components/common/ImageUpload';
 import apiClient from '../../api/client';
@@ -40,6 +42,13 @@ export default function ProfilePage() {
     }
   };
 
+  const handleShare = async () => {
+    if (!user?.id) return;
+    const url = Linking.createURL(`/users/${user.id}`);
+    await Clipboard.setStringAsync(url);
+    setModal({ isOpen: true, message: 'Profile link copied to clipboard!', type: 'success' });
+  };
+
   const handleLogout = async () => {
     await logout();
     router.replace('/auth/login');
@@ -69,7 +78,12 @@ export default function ProfilePage() {
                 />
               </View>
             )}
-            <Text className="text-2xl font-bold text-white">My Profile</Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-2xl font-bold text-white">My Profile</Text>
+              <Pressable onPress={handleShare} hitSlop={8}>
+                <Ionicons name="share-social-outline" size={20} color="rgba(255,255,255,0.8)" />
+              </Pressable>
+            </View>
             <Text className="text-blue-100 mt-1">Update your account details</Text>
           </View>
 

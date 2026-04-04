@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import ModalMessage from '../../components/common/ModalMessage';
 import BarChart from '../../components/common/BarChart';
 import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -28,6 +31,13 @@ export default function UserProfilePage() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' } | null>(null);
+
+  const handleShare = async () => {
+    const url = Linking.createURL(`/users/${id}`);
+    await Clipboard.setStringAsync(url);
+    setModal({ isOpen: true, message: 'Profile link copied to clipboard!', type: 'success' });
+  };
 
   const fetchProfile = () => {
     setLoading(true);
@@ -56,6 +66,12 @@ export default function UserProfilePage() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50" contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 16 }}>
+      <ModalMessage
+        isOpen={modal?.isOpen || false}
+        message={modal?.message || ''}
+        type={modal?.type || 'success'}
+        onClose={() => setModal(null)}
+      />
       {loading && (
         <View className="items-center justify-center h-64 bg-white rounded-2xl shadow-xl">
           <ActivityIndicator size="large" color="#3b82f6" />
@@ -76,7 +92,12 @@ export default function UserProfilePage() {
                 </Text>
               </View>
             )}
-            <Text className="text-2xl font-bold text-white">{profile.username}</Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-2xl font-bold text-white">{profile.username}</Text>
+              <Pressable onPress={handleShare} hitSlop={8}>
+                <Ionicons name="share-social-outline" size={18} color="rgba(255,255,255,0.8)" />
+              </Pressable>
+            </View>
             <Text className="text-blue-100 mt-1">
               {positionBadge(profile.position)} Leaderboard Position
             </Text>

@@ -106,7 +106,7 @@ export default function TrackScreen() {
 
     await Location.startLocationUpdatesAsync(LOCATION_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
-      timeInterval: 1500,
+      timeInterval: 500,
       distanceInterval: 1,
       foregroundService: {
         notificationTitle: 'Tracking Activity',

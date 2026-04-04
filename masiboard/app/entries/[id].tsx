@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Image, Platform, Modal } from 'react-native';
 import { useLocalSearchParams, Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ErrorMessage from '../../components/common/ErrorMessage';
@@ -90,6 +92,12 @@ export default function EntryPage() {
   };
 
   useEffect(() => { fetchData(); }, [id]);
+
+  const handleShare = async () => {
+    const url = Linking.createURL(`/entries/${id}`);
+    await Clipboard.setStringAsync(url);
+    setModal({ isOpen: true, message: 'Entry link copied to clipboard!', type: 'success' });
+  };
 
   const handleLikeToggle = async () => {
     if (!entry || !likes) return;
@@ -231,7 +239,12 @@ export default function EntryPage() {
                 ) : null}
                 <View className="flex-1">
                   {entry.activity_type && (
-                    <Text className="text-2xl font-bold text-white mb-1">{entry.activity_type}</Text>
+                    <View className="flex-row items-center gap-2 mb-1">
+                      <Text className="text-2xl font-bold text-white">{entry.activity_type}</Text>
+                      <Pressable onPress={handleShare} hitSlop={8}>
+                        <Ionicons name="share-social-outline" size={18} color="rgba(255,255,255,0.8)" />
+                      </Pressable>
+                    </View>
                   )}
                   <View className="flex-row flex-wrap items-center gap-2">
                     <Link href={`/users/${entry.userId}`} asChild>

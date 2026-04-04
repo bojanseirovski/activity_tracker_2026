@@ -1,0 +1,8 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        EXPO_PUBLIC_API_URL: "/"
+    ports:
+      - "3002:80"
