@@ -71,7 +71,7 @@ export default function LeaderboardPage() {
     if (pageNum === 1) setError(null);
     try {
       const { data } = await apiClient.get(API.LEADERBOARD, {
-        params: { userId: user?.id, page: pageNum, limit: PAGE_SIZE, sort: 'id' }
+        params: { userId: user?.id, page: pageNum, limit: PAGE_SIZE, sort: 'date' }
       });
       const incoming: LeaderboardEntry[] = data;
       setEntries(prev => pageNum === 1 ? incoming : [...prev, ...incoming]);
