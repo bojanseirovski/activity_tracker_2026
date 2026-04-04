@@ -11,7 +11,7 @@ import TrackMap from '../../components/map/TrackMap';
 import { Picker } from '@react-native-picker/picker';
 import { LOCATION_TASK, TRACKING_PATH_KEY } from '../../tasks/locationTask';
 
-type Coord = { latitude: number; longitude: number };
+type Coord = { latitude: number; longitude: number; speed?: number | null; altitude?: number | null };
 interface ActivityType { id: number; name: string; }
 
 function haversineDistance(coords: Coord[]): number {
@@ -39,6 +39,16 @@ function formatTime(seconds: number): string {
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(2)} km`;
+}
+
+function formatSpeed(mps: number | null | undefined): string {
+  if (mps == null || mps < 0) return '-- km/h';
+  return `${(mps * 3.6).toFixed(1)} km/h`;
+}
+
+function formatElevation(meters: number | null | undefined): string {
+  if (meters == null) return '-- m';
+  return `${Math.round(meters)} m`;
 }
 
 export default function TrackScreen() {
@@ -158,6 +168,9 @@ export default function TrackScreen() {
   };
 
   const distance = haversineDistance(path);
+  const lastCoord = path[path.length - 1];
+  const currentSpeed = lastCoord?.speed;
+  const currentElevation = lastCoord?.altitude;
 
   const handleSave = async () => {
     setSaving(true);
@@ -185,7 +198,7 @@ export default function TrackScreen() {
           Activity Tracker
         </Text>
 
-        <View className="flex-row justify-around mb-4">
+        <View className="flex-row justify-around mb-2">
           <View className="items-center">
             <Text className="text-sm text-gray-500">Time</Text>
             <Text className="text-3xl font-bold text-gray-800">{formatTime(elapsed)}</Text>
@@ -199,6 +212,19 @@ export default function TrackScreen() {
             <Text className="text-3xl font-bold text-gray-800">{path.length}</Text>
           </View>
         </View>
+
+        {(tracking || stopped) && (
+          <View className="flex-row justify-around mb-4">
+            <View className="items-center">
+              <Text className="text-sm text-gray-500">Speed</Text>
+              <Text className="text-xl font-bold text-gray-800">{formatSpeed(currentSpeed)}</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-sm text-gray-500">Elevation</Text>
+              <Text className="text-xl font-bold text-gray-800">{formatElevation(currentElevation)}</Text>
+            </View>
+          </View>
+        )}
 
         {error && (
           <Text className="text-red-500 text-center mb-3">{error}</Text>

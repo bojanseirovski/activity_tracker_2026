@@ -13,6 +13,8 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }: any) => {
   const newCoords = locations.map((l: Location.LocationObject) => ({
     latitude: l.coords.latitude,
     longitude: l.coords.longitude,
+    speed: l.coords.speed,
+    altitude: l.coords.altitude,
   }));
   await AsyncStorage.setItem(TRACKING_PATH_KEY, JSON.stringify([...existing, ...newCoords]));
 });

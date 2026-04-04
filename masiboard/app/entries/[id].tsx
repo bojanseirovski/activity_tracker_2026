@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Image, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Image, Platform, Modal } from 'react-native';
 import { useLocalSearchParams, Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,6 +13,7 @@ import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
 import { formatDistance, toDisplayDistance, toRawDistance } from '../../utils/distance';
 import TrackMap from '../../components/map/TrackMap';
+import Gallery from 'react-native-awesome-gallery';
 
 interface EntryDetail {
   id: number;
@@ -24,7 +25,7 @@ interface EntryDetail {
   activity_type: string | null;
   image_url: string | null;
   unit?: string;
-  tracking_data?: { latitude: number; longitude: number }[] | null;
+  tracking_data?: { latitude: number; longitude: number; speed?: number | null; altitude?: number | null }[] | null;
 }
 
 interface LikesData {
@@ -36,6 +37,23 @@ interface LikesData {
 interface GalleryImage { id: number; url: string; }
 
 type ModalState = { isOpen: boolean; message: string; type: 'success' | 'error' | 'confirm'; onConfirm?: () => void } | null;
+
+function avgSpeed(data: { speed?: number | null }[]): string {
+  const speeds = data.map(c => c.speed).filter((s): s is number => s != null && s >= 0);
+  if (!speeds.length) return '--';
+  const avg = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+  return `${(avg * 3.6).toFixed(1)} km/h`;
+}
+
+function elevationGain(data: { altitude?: number | null }[]): string {
+  const alts = data.map(c => c.altitude).filter((a): a is number => a != null);
+  if (alts.length < 2) return '--';
+  let gain = 0;
+  for (let i = 1; i < alts.length; i++) {
+    if (alts[i] > alts[i - 1]) gain += alts[i] - alts[i - 1];
+  }
+  return `+${Math.round(gain)} m`;
+}
 
 export default function EntryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,6 +68,8 @@ export default function EntryPage() {
   const [editPoints, setEditPoints] = useState('');
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const fetchData = () => {
     setLoading(true);
@@ -264,6 +284,19 @@ export default function EntryPage() {
                 </View>
               </View>
 
+              {entry.tracking_data && entry.tracking_data.length > 1 && (
+                <View className="flex-row gap-4 mb-5">
+                  <View className="flex-1 bg-gray-50 rounded-xl p-4 items-center">
+                    <Text className="text-2xl font-bold text-gray-800">{avgSpeed(entry.tracking_data)}</Text>
+                    <Text className="text-sm text-gray-500 mt-1">Avg Speed</Text>
+                  </View>
+                  <View className="flex-1 bg-gray-50 rounded-xl p-4 items-center">
+                    <Text className="text-2xl font-bold text-gray-800">{elevationGain(entry.tracking_data)}</Text>
+                    <Text className="text-sm text-gray-500 mt-1">Elevation Gain</Text>
+                  </View>
+                </View>
+              )}
+
               {/* Like button */}
               {user && user.id !== entry.userId && likes && (
                 <Pressable
@@ -327,15 +360,17 @@ export default function EntryPage() {
                 <View className="mt-6">
                   <Text className="text-sm font-medium text-gray-700 mb-3">Images</Text>
                   <View className="flex-row flex-wrap gap-3">
-                    {gallery.map(img => (
+                    {gallery.map((img, index) => (
                       <View key={img.id} style={{ position: 'relative' }}>
-                        <Image
-                          source={{ uri: img.url }}
-                          style={{ width: 100, height: 100, borderRadius: 8 }}
-                        />
+                        <Pressable onPress={() => { setLightboxIndex(index); setLightboxVisible(true); }}>
+                          <Image
+                            source={{ uri: img.url }}
+                            style={{ width: 100, height: 100, borderRadius: 8 }}
+                          />
+                        </Pressable>
                         {isOwner && (
                           <Pressable
-                            onPress={() => handleGalleryDelete(img.id)}
+                            onPress={(e) => { e.stopPropagation(); handleGalleryDelete(img.id); }}
                             style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#ef4444', borderRadius: 10, width: 20, height: 20 }}
                             className="items-center justify-center"
                           >
@@ -371,6 +406,30 @@ export default function EntryPage() {
           )}
         </View>
       )}
+
+      <Modal visible={lightboxVisible} transparent={false} onRequestClose={() => setLightboxVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <Gallery
+            data={gallery.map(img => img.url)}
+            initialIndex={lightboxIndex}
+            onSwipeToClose={() => setLightboxVisible(false)}
+            renderItem={({ item, setImageDimensions }) => (
+              <Image
+                source={{ uri: item }}
+                style={{ flex: 1 }}
+                resizeMode="contain"
+                onLoad={(e) => { const s = e.nativeEvent.source; if (s) setImageDimensions({ width: s.width, height: s.height }); }}
+              />
+            )}
+          />
+          <Pressable
+            onPress={() => setLightboxVisible(false)}
+            style={{ position: 'absolute', top: 48, right: 16, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 6 }}
+          >
+            <Ionicons name="close" size={24} color="white" />
+          </Pressable>
+        </View>
+      </Modal>
 
       <Link href="/tabs" className="mt-5 self-center">
         <View className="flex-row items-center gap-1">
