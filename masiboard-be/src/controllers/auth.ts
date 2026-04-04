@@ -3,7 +3,7 @@ import { eq, and, gt, isNull, sql } from 'drizzle-orm';
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cryptoUtils = require('crypto');
-const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+import { emailService } from '../services/email';
 import { db } from '../db';
 import { users, passwordResetTokens } from '../db/schema';
 import { requireAuth, JWT_SECRET, JWT_EXPIRES_IN } from '../middleware/auth';
@@ -32,18 +32,13 @@ router.post('/register', async (req, res) => {
         res.status(201).json({ message: 'User registered successfully', token });
 
         // Send welcome email (fire and forget)
-        try {
-            const mailerSend = new MailerSend({ apiKey: process.env.MAILERSEND_API_KEY || '' });
-            const emailParams = new EmailParams()
-                .setFrom(new Sender(process.env.MAILERSEND_FROM_EMAIL || 'noreply@example.com', 'Masiboard'))
-                .setTo([new Recipient(email, username)])
-                .setSubject('Welcome to Masiboard!')
-                .setHtml(`<p>Hi ${username},</p><p>Welcome to Masiboard! Your account is ready — start logging your activities and climb the leaderboard.</p>`)
-                .setText(`Hi ${username},\n\nWelcome to Masiboard! Your account is ready — start logging your activities and climb the leaderboard.`);
-            await mailerSend.email.send(emailParams);
-        } catch (err: any) {
-            console.error('Welcome email error:', err);
-        }
+        emailService.send({
+            to: email,
+            toName: username,
+            subject: 'Welcome to ActivityTracker!',
+            html: `<p>Hi ${username},</p><p>Welcome to ActivityTracker! Your account is ready — start logging your activities and climb the leaderboard.</p>`,
+            text: `Hi ${username},\n\nWelcome to ActivityTracker! Your account is ready — start logging your activities and climb the leaderboard.`,
+        }).catch((err: any) => console.error('Welcome email error:', err));
     } catch (err: any) {
         if (err.code === '23505') {
             if (err.constraint?.includes('email')) return res.status(400).json({ error: 'Email already exists' });
@@ -106,15 +101,12 @@ router.post('/auth/forgot-password', async (req, res) => {
 
         const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/reset-password?token=${token}`;
 
-        const mailerSend = new MailerSend({ apiKey: process.env.MAILERSEND_API_KEY || '' });
-        const emailParams = new EmailParams()
-            .setFrom(new Sender(process.env.MAILERSEND_FROM_EMAIL || 'noreply@example.com', 'Masiboard'))
-            .setTo([new Recipient(email)])
-            .setSubject('Reset your password')
-            .setHtml(`<p>Click the link below to reset your password. This link expires in 24 hours.</p><p><a href="${resetLink}">${resetLink}</a></p>`)
-            .setText(`Reset your password by visiting: ${resetLink}\n\nThis link expires in 24 hours.`);
-
-        await mailerSend.email.send(emailParams);
+        await emailService.send({
+            to: email,
+            subject: 'Reset your password',
+            html: `<p>Click the link below to reset your password. This link expires in 24 hours.</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+            text: `Reset your password by visiting: ${resetLink}\n\nThis link expires in 24 hours.`,
+        });
     } catch (err: any) {
         console.error('Forgot password error:', err);
     }

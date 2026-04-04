@@ -34,6 +34,10 @@ services:
       A_SECRET_ACCESS_KEY: ${A_SECRET_ACCESS_KEY}
       A_REGION: ${A_REGION}
       A_S3_BUCKET: ${A_S3_BUCKET}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
     depends_on:
       db:
         condition: service_healthy

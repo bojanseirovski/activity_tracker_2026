@@ -20,6 +20,7 @@
   "description": "",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1018.0",
+    "@types/nodemailer": "^8.0.0",
     "bcrypt": "^5.1.1",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
@@ -29,6 +30,7 @@
     "jsonwebtoken": "^9.0.3",
     "mailersend": "^2.6.0",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.4",
     "pg": "^8.13.3",
     "serverless-http": "^3.2.0",
     "uuid": "^8.3.2"
