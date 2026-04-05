@@ -8,8 +8,8 @@ const Navbar = () => {
 
     const navItems = user
         ? [
-            { name: 'Leaderboard', path: '/' },
-            { name: 'Search & Filter', path: '/search' },
+            { name: 'Activities', path: '/' },
+            { name: 'Search', path: '/search' },
             { name: 'Activity Types', path: '/activity-types' },
             { name: 'Challenges', path: '/challenges' },
             { name: 'Teams', path: '/teams' },

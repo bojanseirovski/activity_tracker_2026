@@ -6,6 +6,7 @@ import LeaderboardPage from './components/pages/LeaderboardPage';
 import SearchFilterPage from './components/pages/SearchFilterPage';
 import AddEntryPage from './components/pages/AddEntryPage';
 import Navbar from './components/common/Navbar';
+import Footer from './components/common/Footer';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Logout from './components/auth/Logout';
@@ -35,7 +36,7 @@ const App: React.FC = () => {
                 <div className="bg-white min-h-screen">
                     <Navbar />
 
-                    <main>
+                    <main className="pb-14">
                         <Routes>
                             <Route path="/" element={<PrivateRoute><LeaderboardPage /></PrivateRoute>} />
                             <Route path="/search" element={<PrivateRoute><SearchFilterPage /></PrivateRoute>} />
@@ -57,6 +58,7 @@ const App: React.FC = () => {
                             <Route path="*" element={<CatchAllRedirect />} />
                         </Routes>
                     </main>
+                    <Footer />
                 </div>
             </AuthProvider>
         </Router>

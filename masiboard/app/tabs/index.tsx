@@ -308,14 +308,6 @@ export default function LeaderboardPage() {
           onEndReachedThreshold={0.3}
           ListHeaderComponent={
             <View className="px-4 pt-6 pb-4">
-              {/* <Text className="text-3xl font-bold text-gray-800 text-center mb-1">Leaderboard</Text>
-              <Text className="text-gray-500 text-center mb-6">Top performers ranked by points</Text>
-
-              <View className="flex-row justify-between mb-2">
-                <Link href="/tabs/search">
-                  <Text className="text-blue-600 font-medium">Search entries</Text>
-                </Link>
-              </View> */}
             </View>
           }
           ListFooterComponent={

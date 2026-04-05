@@ -10,16 +10,9 @@ services:
       PORT: 3001
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-    develop:
-      watch:
-        - action: sync
-          path: ./src
-          target: /app/src
-        - action: sync
-          path: ./public
-          target: /app/public
-        - action: rebuild
-          path: ./package.json
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
 
 volumes:
   pgdata:

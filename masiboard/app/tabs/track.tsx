@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { View, Text, Pressable, Alert, Platform } from 'react-native';
 import apiClient from '../../api/client';
 import { API } from '../../constants/api';
@@ -7,6 +8,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import TrackMap from '../../components/map/TrackMap';
 import { Picker } from '@react-native-picker/picker';
 import { LOCATION_TASK, TRACKING_PATH_KEY } from '../../tasks/locationTask';
@@ -65,6 +67,7 @@ export default function TrackScreen() {
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     return () => {
@@ -244,10 +247,19 @@ export default function TrackScreen() {
               </View>
             </View>
             <Pressable
-              className="bg-blue-500 rounded-lg py-4 items-center"
+              className="bg-blue-500 rounded-lg py-4 items-center mb-2"
               onPress={handleStart}
             >
               <Text className="text-white text-lg font-bold">Start</Text>
+            </Pressable>
+            <Pressable
+              className="bg-blue-500 rounded-lg py-4 items-center"
+              onPress={() => router.push('/tabs/add-entry')} hitSlop={8}
+            >
+              <Text className="text-white text-lg font-bold">
+                <Ionicons name="add-circle" size={32} color="#fff" />
+                Add Entry
+              </Text>
             </Pressable>
           </>
         )}

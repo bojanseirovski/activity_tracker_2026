@@ -32,15 +32,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Leaderboard',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={size} color={color} />,
+          title: 'Activities',
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="add-entry"
+        name="track"
         options={{
-          title: 'Add Entry',
-          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
+          title: 'Track',
+          tabBarIcon: ({ color, size }) => <Ionicons name="navigate" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -58,19 +58,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="track"
-        options={{
-          title: 'Track',
-          tabBarIcon: ({ color, size }) => <Ionicons name="navigate" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
         }}
       />
+      <Tabs.Screen name="add-entry" options={{ href: null }} />
       <Tabs.Screen name="activity-types" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />
     </Tabs>
