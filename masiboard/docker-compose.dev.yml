@@ -4,22 +4,16 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3001:3001"
+      - "8081:8081"
     environment:
-      REACT_APP_API_URL: http://localhost:3000
-      PORT: 3001
-      CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
+      EXPO_PUBLIC_API_URL: http://localhost:3000
     develop:
       watch:
         - action: sync
-          path: ./src
-          target: /app/src
+          path: ./app
+          target: /app/app
         - action: sync
-          path: ./public
-          target: /app/public
+          path: ./assets
+          target: /app/assets
         - action: rebuild
           path: ./package.json
-
-volumes:
-  pgdata:

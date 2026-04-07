@@ -1,0 +1,73 @@
+import { Tabs, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { View, Text, Image, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export default function TabsLayout() {
+  const router = useRouter();
+
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+        <View className="flex-row items-center">
+          <Image
+            source={require('../../assets/favicon.png')}
+            className="w-8 h-8 mr-3"
+            resizeMode="contain"
+          />
+          <Text className="text-xl font-bold text-gray-800">ActivityTracker</Text>
+        </View>
+        <Pressable onPress={() => router.push('/tabs/search')} hitSlop={8}>
+          <Ionicons name="search" size={22} color="#374151" />
+        </Pressable>
+      </View>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#9ca3af',
+        tabBarStyle: { backgroundColor: '#ffffff', borderTopColor: '#e5e7eb' },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Activities',
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="track"
+        options={{
+          title: 'Track',
+          tabBarIcon: ({ color, size }) => <Ionicons name="navigate" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="challenges"
+        options={{
+          title: 'Challenges',
+          tabBarIcon: ({ color, size }) => <Ionicons name="flag" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="teams"
+        options={{
+          title: 'Teams',
+          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen name="add-entry" options={{ href: null }} />
+      <Tabs.Screen name="activity-types" options={{ href: null }} />
+      <Tabs.Screen name="search" options={{ href: null }} />
+    </Tabs>
+    </SafeAreaView>
+  );
+}

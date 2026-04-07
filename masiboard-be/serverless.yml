@@ -12,7 +12,17 @@ provider:
     MAILERSEND_API_KEY: ${env:MAILERSEND_API_KEY}
     MAILERSEND_FROM_EMAIL: ${env:MAILERSEND_FROM_EMAIL}
     FRONTEND_URL: ${env:FRONTEND_URL}
+    S3_BUCKET: ${env:S3_BUCKET}
+    S3_REGION: ${env:S3_REGION}
     NODE_ENV: production
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource: arn:aws:s3:::${env:S3_BUCKET}/*
 
 functions:
   api:
