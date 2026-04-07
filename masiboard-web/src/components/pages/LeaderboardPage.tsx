@@ -6,6 +6,8 @@ import apiClient from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import { MESSAGES } from '../../constants/messages';
+import TrackMap from '../map/TrackMap';
+import { formatDistance } from '../../utils/distance';
 
 interface LeaderboardEntry {
     id: number;
@@ -17,6 +19,8 @@ interface LeaderboardEntry {
     like_count?: number;
     liked_by_me?: boolean;
     image_url?: string | null;
+    unit?: string;
+    tracking_data?: { latitude: number; longitude: number }[] | null;
 }
 
 interface LikeUser {
@@ -287,117 +291,125 @@ const LeaderboardPage: React.FC = () => {
                                             </div>
                                         ) : (
                                             // Display mode
-                                            <>
-                                                <div className="flex items-center">
-                                                    <div className={`
-                                                        flex items-center justify-center w-12 h-12 rounded-full mr-6 font-bold text-lg
-                                                        ${index === 0 ? 'bg-yellow-500 text-white' : ''}
-                                                        ${index === 1 ? 'bg-gray-400 text-white' : ''}
-                                                        ${index === 2 ? 'bg-orange-500 text-white' : ''}
-                                                        ${index > 2 ? 'bg-gray-200 text-gray-700' : ''}
-                                                    `}>
-                                                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                                            <div className="w-full">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center">
+                                                        <div className={`
+                                                            flex items-center justify-center w-12 h-12 rounded-full mr-6 font-bold text-lg
+                                                            ${index === 0 ? 'bg-yellow-500 text-white' : ''}
+                                                            ${index === 1 ? 'bg-gray-400 text-white' : ''}
+                                                            ${index === 2 ? 'bg-orange-500 text-white' : ''}
+                                                            ${index > 2 ? 'bg-gray-200 text-gray-700' : ''}
+                                                        `}>
+                                                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                                                        </div>
+                                                        <div>
+                                                            <Link to={`/users/${entry.user_id}`} onClick={(e) => e.stopPropagation()} className="text-xl font-semibold text-blue-600 hover:text-blue-800">{entry.name}</Link>
+                                                            <p className="text-gray-500 text-xs">{entry.activity_type}</p>
+                                                            <p className="text-gray-500 text-xs">{new Date(entry.date).toLocaleDateString()}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <Link to={`/users/${entry.user_id}`} onClick={(e) => e.stopPropagation()} className="text-xl font-semibold text-blue-600 hover:text-blue-800">{entry.name}</Link>
-                                                        <p className="text-gray-600 text-sm">Player</p>
-                                                        <p className="text-gray-500 text-xs">{new Date(entry.date).toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="text-sm font-medium text-gray-700">{entry.activity_type}</p>
-                                                    <p className="text-gray-500 text-xs">Activity</p>
-                                                </div>
-                                                <div className="flex items-center space-x-4">
-                                                    {/* Like button + count + popover */}
-                                                    {likesMap[entry.id] && (() => {
-                                                        const likeState = likesMap[entry.id];
-                                                        return (
-                                                            <div className="relative flex flex-col items-center">
-                                                                {user && user.id !== entry.user_id ? (
+                                                    <div className="flex items-center space-x-4">
+                                                        {/* Like button + count + popover */}
+                                                        {likesMap[entry.id] && (() => {
+                                                            const likeState = likesMap[entry.id];
+                                                            return (
+                                                                <div className="relative flex flex-col items-center">
+                                                                    {user && user.id !== entry.user_id ? (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleLikeToggle(entry.id); }}
+                                                                            className="focus:outline-none"
+                                                                            title={likeState.likedByMe ? 'Unlike' : 'Like'}
+                                                                        >
+                                                                            {likeState.likedByMe ? (
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                                                                                    <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                                                </svg>
+                                                                            ) : (
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-400 hover:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                                        </svg>
+                                                                    )}
                                                                     <button
-                                                                        onClick={(e) => { e.stopPropagation(); handleLikeToggle(entry.id); }}
-                                                                        className="focus:outline-none"
-                                                                        title={likeState.likedByMe ? 'Unlike' : 'Like'}
+                                                                        onClick={(e) => { e.stopPropagation(); handleLikeCountClick(entry.id); }}
+                                                                        className="text-xs text-gray-500 hover:text-gray-700 mt-0.5 leading-none"
                                                                     >
-                                                                        {likeState.likedByMe ? (
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                                                            </svg>
-                                                                        ) : (
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-400 hover:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                                                            </svg>
-                                                                        )}
+                                                                        {likeState.count}
                                                                     </button>
-                                                                ) : (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                                                    </svg>
-                                                                )}
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleLikeCountClick(entry.id); }}
-                                                                    className="text-xs text-gray-500 hover:text-gray-700 mt-0.5 leading-none"
-                                                                >
-                                                                    {likeState.count}
-                                                                </button>
-                                                                {likeState.popoverOpen && (
-                                                                    <>
-                                                                        <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); closeLikesPopover(entry.id); }} />
-                                                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-3 w-44 max-h-52 overflow-y-auto">
-                                                                            <p className="text-xs font-semibold text-gray-500 mb-2">Liked by</p>
-                                                                            {likeState.loadingUsers && (
-                                                                                <div className="flex justify-center py-2">
-                                                                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500" />
-                                                                                </div>
-                                                                            )}
-                                                                            {!likeState.loadingUsers && likeState.users?.length === 0 && (
-                                                                                <p className="text-xs text-gray-400">No likes yet</p>
-                                                                            )}
-                                                                            {likeState.users?.map(u => (
-                                                                                <Link
-                                                                                    key={u.user_id}
-                                                                                    to={`/users/${u.user_id}`}
-                                                                                    onClick={() => closeLikesPopover(entry.id)}
-                                                                                    className="block text-sm text-blue-600 hover:text-blue-800 py-0.5"
-                                                                                >
-                                                                                    {u.username}
-                                                                                </Link>
-                                                                            ))}
-                                                                        </div>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                    <div className="text-right mr-4">
-                                                        <div className="text-2xl font-bold text-gray-800">{entry.points}</div>
-                                                        <p className="text-gray-600 text-sm">Points</p>
+                                                                    {likeState.popoverOpen && (
+                                                                        <>
+                                                                            <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); closeLikesPopover(entry.id); }} />
+                                                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-3 w-44 max-h-52 overflow-y-auto">
+                                                                                <p className="text-xs font-semibold text-gray-500 mb-2">Liked by</p>
+                                                                                {likeState.loadingUsers && (
+                                                                                    <div className="flex justify-center py-2">
+                                                                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500" />
+                                                                                    </div>
+                                                                                )}
+                                                                                {!likeState.loadingUsers && likeState.users?.length === 0 && (
+                                                                                    <p className="text-xs text-gray-400">No likes yet</p>
+                                                                                )}
+                                                                                {likeState.users?.map(u => (
+                                                                                    <Link
+                                                                                        key={u.user_id}
+                                                                                        to={`/users/${u.user_id}`}
+                                                                                        onClick={() => closeLikesPopover(entry.id)}
+                                                                                        className="block text-sm text-blue-600 hover:text-blue-800 py-0.5"
+                                                                                    >
+                                                                                        {u.username}
+                                                                                    </Link>
+                                                                                ))}
+                                                                            </div>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                        <div className="text-right mr-4">
+                                                            <div className="text-2xl font-bold text-gray-800">{formatDistance(entry.points, entry.unit ?? 'km')}</div>
+                                                            <p className="text-gray-600 text-sm">{entry.unit ?? 'km'}</p>
+                                                        </div>
+                                                        {user && user.id === entry.user_id && (
+                                                        <div className="flex flex-col space-y-2">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); startEditing(entry); }}
+                                                                className="text-blue-500 hover:text-blue-700"
+                                                                title="Edit"
+                                                            >
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                                </svg>
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                                                                className="text-red-500 hover:text-red-700"
+                                                                title="Delete"
+                                                            >
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16"></path>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                        )}
                                                     </div>
-                                                    {user && user.id === entry.user_id && (
-                                                    <div className="flex flex-col space-y-2">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); startEditing(entry); }}
-                                                            className="text-blue-500 hover:text-blue-700"
-                                                            title="Edit"
-                                                        >
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                            </svg>
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
-                                                            className="text-red-500 hover:text-red-700"
-                                                            title="Delete"
-                                                        >
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16"></path>
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                    )}
                                                 </div>
-                                            </>
+                                                {/* Mini map */}
+                                                {Array.isArray(entry.tracking_data) && entry.tracking_data.length >= 2 && (
+                                                    <div
+                                                        className="mt-4 rounded-xl overflow-hidden"
+                                                        style={{ height: 200 }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <TrackMap path={entry.tracking_data} />
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 ))}

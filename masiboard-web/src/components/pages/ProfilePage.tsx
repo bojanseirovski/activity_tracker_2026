@@ -15,6 +15,7 @@ const ProfilePage: React.FC = () => {
         email: user?.email || '',
         profileImagePublic: true,
         image_url: null as string | null,
+        unit: 'km' as 'km' | 'mi',
     });
     const [modal, setModal] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' } | null>(null);
 
@@ -27,6 +28,7 @@ const ProfilePage: React.FC = () => {
                     email: response.data.email || '',
                     profileImagePublic: response.data.profileImagePublic ?? true,
                     image_url: response.data.image_url ?? null,
+                    unit: response.data.unit === 'mi' ? 'mi' : 'km',
                 });
                 updateUser(response.data);
             })
@@ -53,6 +55,7 @@ const ProfilePage: React.FC = () => {
             const response = await apiClient.post(API.USER_ME, {
                 username: form.username,
                 profile_image_public: form.profileImagePublic,
+                unit: form.unit,
             });
             updateUser({ ...response.data, image_url: form.image_url });
             setModal({ isOpen: true, message: MESSAGES.PROFILE_UPDATE_SUCCESS, type: 'success' });
@@ -133,6 +136,24 @@ const ProfilePage: React.FC = () => {
                             />
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Distance Unit</label>
+                            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                                {(['km', 'mi'] as const).map(u => (
+                                    <button
+                                        key={u}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, unit: u })}
+                                        className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                                            form.unit === u ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {u}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="flex items-center justify-between">
                             <label htmlFor="profileImagePublic" className="text-sm font-medium text-gray-700">
                                 Show profile image publicly
@@ -165,7 +186,28 @@ const ProfilePage: React.FC = () => {
                     </form>
                 </div>
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <Link
+                        to="/activity-types"
+                        className="flex items-center gap-3 py-4 px-6 hover:bg-gray-50 text-gray-700 border-b border-gray-100"
+                    >
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                        <span className="font-medium">Activity Types</span>
+                    </Link>
+                    <Link
+                        to="/search"
+                        className="flex items-center gap-3 py-4 px-6 hover:bg-gray-50 text-gray-700"
+                    >
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span className="font-medium">Search Entries</span>
+                    </Link>
+                </div>
+
+                <div className="mt-4 text-center">
                     <Link
                         to="/"
                         className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center"

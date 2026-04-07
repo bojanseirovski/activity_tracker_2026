@@ -9,8 +9,6 @@ const Navbar = () => {
     const navItems = user
         ? [
             { name: 'Activities', path: '/' },
-            { name: 'Search', path: '/search' },
-            { name: 'Activity Types', path: '/activity-types' },
             { name: 'Challenges', path: '/challenges' },
             { name: 'Teams', path: '/teams' },
             { name: 'Add Entry', path: '/entries/add' },

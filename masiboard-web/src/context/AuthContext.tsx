@@ -8,6 +8,7 @@ interface User {
   userId: number;
   profileImagePublic?: boolean;
   image_url?: string | null;
+  unit?: string;
 }
 
 interface AuthContextType {

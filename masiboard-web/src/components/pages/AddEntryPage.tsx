@@ -137,7 +137,7 @@ const AddEntryPage: React.FC = () => {
 
                         <div>
                             <label htmlFor="points" className="block text-sm font-medium text-gray-700 mb-1">
-                                Points
+                                Distance
                             </label>
                             <input
                                 type="number"

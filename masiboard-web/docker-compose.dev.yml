@@ -13,6 +13,12 @@ services:
     volumes:
       - ./src:/app/src
       - ./public:/app/public
-
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: rebuild
+          path: ./package.json
 volumes:
   pgdata:

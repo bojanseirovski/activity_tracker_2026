@@ -25,5 +25,6 @@ export const API = {
     TEAM_JOIN: (id: number) => `/api/teams/${id}/join`,
     TEAM_LEADERBOARD: (id: number) => `/api/teams/${id}/leaderboard`,
     IMAGE_UPLOAD: '/api/images/upload',
+    IMAGES: (entityType: string, entityId: number) => `/api/images?entity_type=${entityType}&entity_id=${entityId}`,
     IMAGE_DELETE: (id: number) => `/api/images/${id}`,
 };
