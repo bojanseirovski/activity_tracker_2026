@@ -27,6 +27,9 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 - **Image Uploads** — Upload images for teams, challenges, and profiles (stored in AWS S3)
 - **Unit Preferences** — Users can choose km or mi; distances display in their preferred unit
 - **Stats & Charts** — Distance averages (week/month/year) for users and teams; total distance and top-20 leaderboards for challenges and teams
+- **GPS Tracking** — Record routes via mobile; view mini map on each leaderboard card
+- **Entry Gallery** — Upload and view multiple photos per activity entry
+- **Web App** — Standalone React SPA with leaderboard, entries, challenges, teams, profiles, and search
 - **Authentication** — Register, login, logout with JWT-based auth
 - **Forgot Password** — Secure email-based password reset via MailerSend (24-hour token)
 
@@ -34,7 +37,17 @@ A competitive activity tracking and leaderboard app. Users log activities with p
 
 ## Tech Stack
 
-### Mobile / Web App
+### Web App
+| | |
+|---|---|
+| Framework | React (Create React App) |
+| Routing | React Router |
+| Styling | Tailwind CSS |
+| Icons | Ionic Icons v7 |
+| Maps | Leaflet + react-leaflet |
+| Language | TypeScript 4.9 |
+
+### Mobile App
 | | |
 |---|---|
 | Framework | Expo SDK 55 + React Native 0.83.2 |
@@ -61,7 +74,8 @@ All repos must be cloned as siblings inside the same parent directory:
 
 ```
 dev/
-├── masiboard-app/   ← mobile/web app (Expo + React Native)
+├── masiboard-web/       ← web app (React + Tailwind CSS)
+├── masiboard/   ← mobile/web app (Expo + React Native)
 ├── masiboard-be/    ← backend (Express + PostgreSQL)
 └── README.md
 ```
@@ -74,12 +88,18 @@ Run each service from its own directory (they have separate compose files):
 # Backend (API + PostgreSQL) — from masiboard-be/
 docker compose -f docker-compose.dev.yml up --build
 
-# Mobile/Web app (Expo) — from masiboard-app/
+# Web app (React) — from masiboard-web/
+docker compose -f docker-compose.dev.yml up --build
+# or natively:
+npm start
+
+# Mobile app (Expo) — from masiboard/
 docker compose -f docker-compose.dev.yml up --build
 # or run natively (also enables iOS/Android via Expo Go):
 npx expo start
 ```
 
+- Web app: http://localhost:3001
 - Expo web: http://localhost:8081 · Expo mobile: scan QR code with Expo Go
 - Backend API: http://localhost:3000
 
@@ -88,18 +108,27 @@ Hot-reloading is enabled for all services via Docker Compose watch.
 ### Production
 
 ```bash
+# Web app
+docker compose -f masiboard-web/docker-compose.yml up --build
 
 # Mobile/Web app
-docker compose -f masiboard-app/docker-compose.yml up --build
+docker compose -f masiboard/docker-compose.yml up --build
 ```
 
-- Mobile/Web app: http://localhost:3002 (nginx, proxies `/api/*` to the backend)
+- Web app: http://localhost:3002 (nginx, proxies `/api/*` to the backend)
+- Mobile/Web app: http://localhost:3003 (nginx, proxies `/api/*` to the backend)
 
 ---
 
 ## Environment Variables
 
-### `masiboard-app/` (see `.env.example`)
+### `masiboard-web/` (see `.env.example`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `REACT_APP_API_URL` | `http://localhost:3000` | Backend API base URL (build-time) |
+
+### `masiboard/` (see `.env.example`)
 
 | Variable | Default | Description |
 |---|---|---|
