@@ -92,7 +92,7 @@ const TermsPage: React.FC = () => {
 
                 <div className="mt-6 text-center">
                     <Link
-                        to="/login"
+                        to="/"
                         className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center"
                     >
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
