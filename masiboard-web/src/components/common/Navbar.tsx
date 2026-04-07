@@ -8,16 +8,16 @@ const Navbar = () => {
 
     const navItems = user
         ? [
-            { name: 'Activities', path: '/' },
-            { name: 'Challenges', path: '/challenges' },
-            { name: 'Teams', path: '/teams' },
-            { name: 'Add Entry', path: '/entries/add' },
-            { name: 'Profile', path: '/profile' },
-            { name: 'Logout', path: '/logout' },
+            { name: 'Activities', path: '/', icon:'list-outline', size: 24 },
+            { name: 'Challenges', path: '/challenges' , icon:'flag', size: 24},
+            { name: 'Teams', path: '/teams' , icon:'people', size: 24},
+            { name: 'Add Entry', path: '/entries/add' , icon:'add-circle-outline', size: 24},
+            { name: 'Profile', path: '/profile' , icon:'person', size: 24},
+            { name: 'Logout', path: '/logout' , icon:'log-out-outline', size: 24},
         ]
         : [
-            { name: 'Login', path: '/login' },
-            { name: 'Register', path: '/register' },
+            { name: 'Login', path: '/login', icon: 'log-in-outline', size: 24 },
+            { name: 'Register', path: '/register', icon: 'person-add-outline', size: 24 },
         ];
 
     const getInitials = (name: string) =>
@@ -68,8 +68,8 @@ const Navbar = () => {
                                 to={item.path}
                                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
                                 onClick={() => setIsMenuOpen(false)} // Close menu when clicking a link
-                            >
-                                {item.name}
+                            > 
+                                <ion-icon name={item.icon} style={{ fontSize: '24px', color: '#3b82f6' }} className="mx-3"/>{item.name}
                             </Link>
                         ))}
                     </div>
